@@ -693,8 +693,8 @@ var W={
   b:/ (b|bee|be|beat|bea|bean|beam|bead|v|vee|d|dee|e|bravo|the|me|we) /,
   a:/ (a|ay|aye|eh|hey|8|eight|alpha|ate|age|ace) /,
   bAlone:/^ (b|bee|be|bravo|v|vee) $/, aAlone:/^ (a|ay|eh|hey|8|eight|alpha) $/,
-  send:/ (send|sends|sent|sending|sand|sen|cent|scent|send it|sent it|go ahead|go|ok send|okay send|yes send|confirm) /,
-  close:/ (zero|0|0 0|o|oh|close|closed|closing|clothes|clause|confirmed|confirm|reads 0|reads zero|flows zero|flow zero|no flow) /
+  send:/ (send|sends|sent|sending|sand|sen|cent|scent|send it|sent it|go ahead|ok send|okay send|yes send) /,
+  close:/ (zero|0|0 0|reads o|reads oh|close|closed|closing|clothes|clause|reads 0|reads zero|flows zero|flow zero|no flow) /
 };
 function intent(t){
   if(S.stage===0&&!S.busy){if(W.stop.test(t)&&(W.p1.test(t)||/ (1|one|won) /.test(t)))return 'stop';if(/^ (stop|stop it|stop the pump|stop pump 1|stop pump one) $/.test(t))return 'stop';return null}
@@ -736,7 +736,7 @@ function startListen(){
       var done=false;for(var k=0;k<r.length&&!done;k++)done=understand(r[k].transcript,!r.isFinal);
       if(done){handled[key]=true;$('said').textContent=txt.trim()}
       else if(r.isFinal)understand(txt,false)}};
-    rec.onerror=function(e){if(e.error==='not-allowed'||e.error==='service-not-allowed'){want=false;stopListen();toast('Microphone blocked. Type it, or use the buttons.')}};
+    rec.onerror=function(e){if(e.error==='not-allowed'||e.error==='service-not-allowed'){want=false;stopListen();toast('Microphone blocked. Type it, or use the buttons.')}else if(e.error==='network'||e.error==='audio-capture'){want=false;stopListen();toast(e.error==='network'?'Voice lost the network. Type it, or use the buttons.':'No microphone found. Type it, or use the buttons.')}};
     rec.onend=function(){if(want&&S.listening){sess++;handled={};setTimeout(function(){if(want)try{rec.start()}catch(_){}},120)}else{S.listening=false;showDock()}};
     rec.start();
   }catch(err){want=false;S.listening=false;showDock();toast('Voice could not start. Type it, or use the buttons.')}
