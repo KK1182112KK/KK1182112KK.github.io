@@ -1,203 +1,576 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow">
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
 <title>OpsThread Live Demo</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Geist:wght@400&family=Barlow+Semi+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
-<style>*{box-sizing:border-box}body{margin:0;background:#0b0e10}</style></head><body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@500;600;700&family=Geist:wght@400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
 [hidden]{display:none!important}
-/* Layout: one screen per role. Field = a phone card stack; Control = a console with the request, the FI-101 trend and the handover list. */
 :root{
-  --bg:#0b0e10; --panel:#141a1d; --panel2:#1b2427; --line:#2f383c;
-  --fg:#e6ebea; --muted:#9aa5a9; --green:#3ddc84; --green-bg:#14201a;
-  --yellow:#f2d533; --yellow-bg:#1b1a10;
-  --f-display:'Barlow Semi Condensed','Arial Narrow',Arial,sans-serif;
-  --f-body:Barlow,Arial,sans-serif;
-  --f-mono:'IBM Plex Mono','Courier New',monospace;
-  color-scheme:dark;
+  --bg:#0b0e10; --bg2:#0f1416; --panel:#141a1d; --panel2:#1a2226; --line:#2a3337; --line2:#3a4448;
+  --fg:#e6ebea; --muted:#9aa5a9; --dim:#5f6a6e;
+  --green:#3ddc84; --green-bg:#11241a; --yellow:#f2d533; --yellow-bg:#1f1c0c;
+  --f:'Barlow',system-ui,sans-serif; --fc:'Barlow Semi Condensed','Barlow',sans-serif; --fm:'IBM Plex Mono',ui-monospace,monospace;
 }
-html,body{height:100%}
-body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:17px;line-height:1.4;
-  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 28px}
-*{box-sizing:border-box}
-button{font:inherit;cursor:pointer}
-button:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
-.top{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1100px;margin:0 auto 14px}
-.brand{display:flex;align-items:baseline;font-family:Geist,Arial,sans-serif;font-weight:400;font-size:26px;line-height:1;letter-spacing:-1.1px;color:#e6ebea}
-.brand svg{width:25px;height:27px;margin:0 1px}
-.tabs{display:flex;gap:6px}
-.tabs a{font-family:var(--f-mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);text-decoration:none;padding:6px 10px;border:1px solid var(--line)}
-.tabs a[aria-current="page"]{color:var(--fg);border-color:var(--fg)}
-.label{font-family:var(--f-mono);font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
-.note{font-size:14px;color:var(--muted)}
-.chip{display:inline-flex;flex-direction:column;gap:2px;padding:10px 14px;border:2px solid var(--line);font-weight:600}
-.chip small{font-weight:400;font-size:14px}
-.chip.open{border-color:var(--muted);color:var(--fg)}
-.chip.rep{border-color:var(--yellow);background:var(--yellow-bg);color:var(--yellow)}
-.chip.closed{border-color:var(--green);background:var(--green-bg);color:var(--green)}
-.btn{border:2px solid var(--fg);background:transparent;color:var(--fg);padding:12px 16px;font-weight:600}
-.btn.primary{background:var(--green);border-color:var(--green);color:var(--bg)}
-.btn:disabled{opacity:.35;cursor:default}
-.btn.ghost{border-color:var(--line);color:var(--muted)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--fg);font-family:var(--f);-webkit-font-smoothing:antialiased}
+body{min-height:100vh;min-height:100dvh;background:radial-gradient(ellipse at 50% 40%,#121a1c 0%,var(--bg) 70%)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+input{font:inherit;color:inherit}
+.mono{font-family:var(--fm)}
 
-/* Field phone */
-#field{max-width:440px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
-.msg{padding:12px 14px;background:var(--panel);border-left:4px solid var(--line)}
-.msg .who{font-family:var(--f-mono);font-size:11px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase}
-.msg .say{font-size:20px;font-weight:600}
-.msg.ops{border-left-color:var(--green)}
-.msg.ops .say{color:var(--green)}
-.req{background:var(--panel);border:1px solid var(--line);padding:16px;display:flex;flex-direction:column;gap:12px}
-.req h2{margin:0;font-family:var(--f-mono);font-size:18px;letter-spacing:1px}
-.step{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
-.step span{min-width:0}
-.step.done span{color:var(--muted);text-decoration:line-through}
-.trend{width:100%;height:auto;display:block}
-.fade{animation:in .35s ease both}
-@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-@media (prefers-reduced-motion:reduce){.fade{animation:none}}
+/* ---------- desktop stage ---------- */
+.app{display:grid;grid-template-columns:auto 1fr auto;gap:28px;align-items:center;max-width:1440px;margin:0 auto;padding:24px 28px 30px;min-height:100vh;min-height:100dvh}
+.phone{width:350px;height:min(740px,calc(100dvh - 60px));min-height:600px;border:2px solid var(--line2);border-radius:38px;background:var(--bg2);padding:14px 12px 12px;display:flex;flex-direction:column;position:relative;transition:border-color .3s,box-shadow .3s;overflow:hidden}
+.phone.turn{border-color:var(--yellow);box-shadow:0 0 0 1px var(--yellow),0 0 40px rgba(242,213,51,.12)}
+.ph-head{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);padding:2px 8px 10px}
+.ph-head .ot{color:var(--fg);font-weight:500}
+.ph-head .role{display:flex;align-items:center;gap:4px;color:var(--fg)}
+.ph-head .sp{flex:1}
+.ph-head .clock{font-family:var(--fm)}
+.ph-head .live{width:7px;height:7px;border-radius:50%;background:var(--green)}
+.pill-btn{font-size:11px;font-weight:600;padding:4px 10px;border-radius:99px;background:var(--panel2);color:var(--fg);border:1px solid var(--line2)}
+.pill-btn.on{background:var(--fg);color:var(--bg)}
 
-/* Control room */
-#control{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px}
-@media (max-width:760px){#control{grid-template-columns:minmax(0,1fr)}}
-.pane{background:var(--panel);border:1px solid var(--line);padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
-.fields{display:grid;grid-template-columns:auto 1fr;gap:6px 18px;font-size:19px}
-.fields dt{color:var(--muted)} .fields dd{margin:0;font-family:var(--f-mono);font-weight:600}
-.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.ho li{padding:6px 0;border-top:1px solid var(--line)}
-.ho{list-style:none;margin:0;padding:0}
-.big{font-family:var(--f-display);font-size:30px;font-weight:700;line-height:1.1;margin:0}
+.stage{display:flex;flex-direction:column;align-items:stretch;min-width:0;height:min(740px,calc(100dvh - 60px));min-height:600px}
+.roles{display:flex;justify-content:space-between;align-items:flex-start;padding:0 6px}
+.rl{display:flex;gap:12px;align-items:center}
+.rl.r{flex-direction:row-reverse;text-align:right}
+.rl svg{width:40px;height:40px;flex:none}
+.rl b{display:block;font-size:20px;font-weight:600}
+.rl span{display:block;font-size:14px;color:var(--muted)}
+.rl.turn span{color:var(--yellow)}
+.rl.turn svg *{stroke:var(--yellow)}
+.center{flex:1;display:flex;flex-direction:column;align-items:center;text-align:center;padding:26px 10px 0}
+.eyebrow{font-size:15px;color:var(--muted);margin-bottom:8px;min-height:20px}
+.headline{font-family:var(--fc);font-weight:600;font-size:clamp(30px,3.2vw,46px);line-height:1.1;min-height:2.2em}
+.headline .y{color:var(--yellow)}.headline .g{color:var(--green)}
+.sub{font-size:17px;color:var(--fg);opacity:.85;margin-top:12px;min-height:24px}
+.flow{position:relative;margin:30px -28px 0;height:84px}
+.flow .base{position:absolute;left:0;right:0;top:11px;height:3px;background:var(--line2)}
+.flow .fbar{position:absolute;left:0;top:11px;height:3px;background:var(--green);transition:width .6s ease}
+.nodes{position:relative;display:flex;justify-content:space-between;padding:0 6%}
+.node{display:flex;flex-direction:column;align-items:center;gap:8px;width:90px;font-size:14px;color:var(--muted);line-height:1.15}
+.node .vi{width:30px;height:24px;background:var(--bg);padding:0 2px}
+.node.now{color:var(--yellow)}
+.node.ok{color:var(--fg)}
+.narr{margin-top:22px;font-size:16px;min-height:22px}
+.narr.y{color:var(--yellow)}
+.dcs{margin:22px auto 0;width:300px;border:1px dashed var(--line2);border-radius:6px;padding:12px 14px;text-align:left;transition:border-color .3s}
+.dcs.hot{border:2px solid var(--fg)}
+.dcs .t{font-size:12px;color:var(--fg);font-weight:600}.dcs .t i{font-style:normal;font-weight:400;color:var(--muted)}
+.dcs .tag{font-family:var(--fm);font-size:12px;color:var(--muted);margin-top:2px}.dcs .tag b{color:var(--fg);font-weight:500;margin-right:6px}
+.dcs .row{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-top:6px}
+.dcs .val{font-family:var(--fm);font-size:34px;color:var(--yellow);letter-spacing:1px}
+.dcs .val.zero{color:var(--green)}
+.dcs .u{font-size:13px;color:var(--muted);margin-left:6px}
+.dcs svg{width:96px;height:36px}
+.foot{position:fixed;right:14px;bottom:8px;font-size:11px;color:var(--dim)}
+
+/* ---------- control-room phone ---------- */
+.card{border:2px solid var(--line2);border-radius:14px;padding:12px 14px;background:var(--panel);min-height:96px;transition:border-color .3s}
+.card.act{border-color:var(--fg)}
+.card .top{display:flex;justify-content:space-between;align-items:flex-start}
+.card .verb{font-family:var(--fc);font-weight:700;font-size:34px;letter-spacing:1px;line-height:1}
+.card .eq{text-align:right;font-family:var(--fm);font-size:24px;line-height:1}
+.card .eq small{display:block;font-size:9px;color:var(--muted);letter-spacing:1px;margin-top:3px}
+.card .unit{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;color:var(--muted)}
+.card .unit .q{display:inline-grid;place-items:center;width:26px;height:24px;border:1.5px solid var(--yellow);border-radius:4px;color:var(--yellow);font-weight:700;font-size:15px}
+.card .unit .v{color:var(--green);font-size:17px;font-weight:600}
+.card.dim .verb,.card.dim .eq{color:var(--muted)}
+.skel{height:12px;border-radius:4px;background:var(--panel2);margin:10px 0}
+.steps{flex:1;overflow:auto;margin-top:10px;border-radius:14px;padding:4px 2px;-webkit-overflow-scrolling:touch}
+.steps.box{border:2px solid var(--line2);background:var(--bg2)}
+.st{display:flex;align-items:center;gap:8px;padding:9px 8px;font-size:13px;color:var(--muted);position:relative}
+.st .vi{width:20px;height:16px;flex:none}
+.st .tx{flex:1;min-width:0}
+.st .meta{font-size:11px;color:var(--muted);display:flex;gap:4px;align-items:center;font-family:var(--fm)}
+.st.ok{color:var(--muted)}
+.st.ok .meta{color:var(--green)}
+.st.now{color:var(--yellow);font-size:15px;font-weight:600}
+.st.now .meta{color:var(--yellow)}
+.st.big{font-size:15px}
+.ask{margin:2px 6px 8px;border:1.5px solid var(--yellow);border-radius:10px;background:var(--yellow-bg);padding:10px}
+.ask .q{font-size:13px;color:var(--yellow);font-weight:600}.ask .q b{color:var(--fg)}
+.ask .opts{display:flex;gap:8px;margin:8px 0}
+.ask .opts button{flex:1;padding:11px 0;border-radius:8px;background:#0d1012;font-weight:600;font-size:14px;border:1px solid var(--line2)}
+.ask .opts button:active{background:var(--panel2)}
+.ask .h{font-size:10.5px;color:var(--muted)}.ask .h2{font-size:11px;color:var(--yellow);margin-top:2px}
+.dock{margin-top:8px;border:2px solid var(--line2);border-radius:14px;padding:10px;text-align:center;background:var(--bg2)}
+.dock .cap{font-family:var(--fm);font-size:11px;color:var(--muted)}
+.dock .typ{display:flex;gap:6px;margin:8px auto 0;max-width:240px}
+.dock input{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line2);border-radius:6px;padding:7px 9px;font-size:16px;text-align:center}
+.dock input::placeholder{color:var(--dim);font-size:13px}
+.dock .go{padding:0 10px;border-radius:6px;background:var(--panel2);border:1px solid var(--line2);font-size:13px}
+.mic{width:52px;height:52px;border-radius:50%;border:2px solid var(--green);background:var(--green-bg);display:grid;place-items:center;margin:10px auto 2px}
+.mic svg{width:22px;height:22px}
+.heard{font-size:12px;color:var(--muted);min-height:16px;margin-top:2px}
+.said{font-size:19px;font-weight:600;text-decoration:underline;text-decoration-color:var(--green);text-underline-offset:4px;min-height:26px;margin-top:2px;word-break:break-word}
+.lvl{display:flex;gap:3px;justify-content:center;margin:6px 0 8px;height:16px;align-items:center}
+.lvl i{width:3px;height:4px;background:var(--green);border-radius:1px;transition:height .1s}
+.listen{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--green);border:1px solid var(--green);border-radius:99px;padding:6px 14px;background:var(--green-bg)}
+.listen::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 1.2s infinite}
+@keyframes blink{50%{opacity:.25}}
+.tip{font-size:11px;color:var(--muted);margin-top:6px}
+.miss{font-size:11.5px;color:var(--yellow);margin-top:4px;min-height:14px}
+.hint{font-size:12px;color:var(--muted);text-align:center;margin:8px 0 4px;min-height:15px}
+.bigbtn{display:block;width:100%;padding:14px 0;border-radius:12px;font-size:16px;font-weight:600;background:var(--panel);color:var(--dim);border:1px solid var(--line)}
+.bigbtn.go{background:var(--green);color:#06140c;border-color:var(--green)}
+.bigbtn.out{background:var(--green-bg);color:var(--green);border-color:var(--green)}
+.bigbtn.ghost{background:var(--panel2);color:var(--fg);border-color:var(--line2)}
+.bigbtn:disabled{cursor:default}
+/* handover */
+.ho h3{font-family:var(--fc);font-size:22px;font-weight:700;padding:4px 4px 8px}.ho h3 small{font-family:var(--f);font-size:12px;font-weight:400;color:var(--muted);margin-left:6px}
+.hob{border-radius:10px;padding:10px;margin-bottom:8px;background:var(--panel);border:1px solid var(--line)}
+.hob.open{border:1.5px solid var(--yellow);background:var(--yellow-bg)}
+.hob .k{font-size:10.5px;font-weight:600;color:var(--muted);margin-bottom:6px}
+.hob.open .k{color:var(--yellow)}.hob.cl .k{color:var(--green)}
+.hob .it{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;margin-top:4px}
+.hob .it .vi{width:18px;height:14px;flex:none;margin-top:2px}
+.hob .sm{font-family:var(--fm);font-size:10.5px;color:var(--muted);margin:2px 0 0 26px}
+.hob.open .sm{color:var(--yellow)}.hob.cl .sm{color:var(--green);opacity:.85}
+
+/* ---------- field phone ---------- */
+.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted)}
+.empty b{font-family:var(--fm);font-size:40px;color:var(--green);font-weight:500;line-height:1}
+.empty span{font-size:13px}.empty em{font-style:normal;font-size:13px;margin-top:2px;font-weight:600;color:var(--fg)}
+.freq{border:2px solid var(--fg);border-radius:14px;padding:10px 12px;background:var(--panel)}
+.freq.dim{border-color:var(--line2)}
+.freq .from{font-size:11px;color:var(--yellow)}
+.freq.dim .from{color:var(--muted)}
+.freq .u{font-family:var(--fc);font-weight:700;font-size:44px;line-height:1.02;letter-spacing:1px}
+.freq .a{font-family:var(--fc);font-weight:700;font-size:28px;line-height:1}
+.freq .a span{font-family:var(--fm);font-weight:500}
+.freq .a small{font-size:11px;font-family:var(--fm);margin-left:6px;color:var(--fg)}
+.freq .chk{font-size:12px;color:var(--yellow);font-weight:600;margin-top:5px}
+.freq.dim .u,.freq.dim .a{color:#c5cdcb}
+.done{display:block;width:100%;margin-top:10px;padding:12px 0;border-radius:14px;background:var(--green);color:#06140c;border:2px solid var(--green)}
+.done b{display:block;font-family:var(--fc);font-size:30px;font-weight:700;letter-spacing:1px;line-height:1}
+.done span{font-size:12px;font-weight:500}
+.done:active{filter:brightness(.92)}
+.chip{margin-top:10px;border-radius:14px;padding:12px;border:2px solid var(--yellow);background:var(--yellow-bg)}
+.chip .lab{display:flex;justify-content:space-between;align-items:center}
+.chip .lab b{background:var(--yellow);color:#14130a;border-radius:99px;padding:3px 10px;font-size:13px;font-weight:700;letter-spacing:.5px}
+.chip .lab span{font-family:var(--fm);font-size:12px;color:var(--yellow)}
+.chip p{font-size:13px;color:#e8e2b8;margin-top:8px}
+.chip.cl{border-color:var(--green);background:var(--green-bg)}
+.chip.cl .lab b{background:transparent;color:var(--green);border:1.5px solid var(--green)}
+.chip.cl .lab span{color:var(--green)}
+.chip.cl p{color:#c8eed8}
+.cam{display:inline-flex;align-items:center;gap:3px;font-size:10px;color:var(--muted);padding:3px 4px;border-radius:4px}
+.cam svg{width:14px;height:12px}
+button.cam{border:1px solid transparent}
+button.cam:active{border-color:var(--line2)}
+
+/* toast */
+.toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,20px);opacity:0;background:var(--panel2);border:1px solid var(--line2);color:var(--fg);padding:9px 16px;border-radius:99px;font-size:13px;transition:.25s;pointer-events:none;z-index:20;max-width:90vw;text-align:center}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* ---------- mobile ---------- */
+.mbar{display:none}
+@media (max-width:999px){
+  body{background:var(--bg)}
+  .app{display:flex;flex-direction:column;padding:0;min-height:0}
+  .stage{order:-1}
+  .eyebrow{display:none}
+  body:not(.dcsOn) .dcs{display:none}
+  .toast{top:calc(78px + env(safe-area-inset-top));bottom:auto}
+  .stage{height:auto;min-height:0}
+  .roles,.flow,.narr,.foot{display:none}
+  .mbar{display:flex;gap:6px;position:sticky;top:0;z-index:5;background:var(--bg);padding:max(10px,env(safe-area-inset-top)) 12px 8px}
+  .mbar button{flex:1;border:1.5px solid var(--line2);border-radius:10px;padding:7px 8px;text-align:left;background:var(--bg2)}
+  .mbar button b{display:block;font-size:14px;font-weight:600}
+  .mbar button span{display:block;font-size:11.5px;color:var(--muted)}
+  .mbar button.view{border-color:var(--fg);background:var(--panel)}
+  .mbar button.turn span{color:var(--yellow)}
+  .mbar button.turn{box-shadow:inset 0 0 0 1px var(--yellow);border-color:var(--yellow)}
+  .center{padding:4px 16px 0}
+  .headline{font-size:22px;min-height:0}
+  .sub{font-size:13.5px;margin-top:4px;min-height:0}
+  .dcs{width:100%;max-width:360px;margin:10px auto 0;padding:8px 12px}
+  .dcs .val{font-size:26px}
+  .phone{width:auto;height:auto;min-height:0;border:0;border-radius:0;box-shadow:none!important;background:transparent;padding:10px 12px max(16px,env(safe-area-inset-bottom));margin:0 auto;width:100%;max-width:460px}
+  .phone.mhide{display:none}
+  .ph-head{display:none}
+  .steps{flex:none;overflow:visible}
+}
 </style>
+</head>
+<body>
+<div class="mbar" id="mbar">
+  <button id="mCR" data-v="cr"><b>Control room</b><span></span></button>
+  <button id="mFD" data-v="fd"><b>Field</b><span></span></button>
+</div>
+<main class="app">
+  <!-- control room phone -->
+  <section class="phone" id="crPhone" aria-label="Control room phone">
+    <div class="ph-head"><span class="ot">OpsThread</span><span class="role"><svg width="13" height="11" viewBox="0 0 13 11" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1" y="1" width="11" height="7" rx="1"/><path d="M4 10h5"/></svg>Control room</span><span class="sp"></span><button class="pill-btn" id="hoBtn">Handover</button><span class="clock">--:--</span></div>
+    <div id="crMain" style="display:flex;flex-direction:column;flex:1;min-height:0">
+      <div class="card" id="crCard"></div>
+      <div class="steps" id="crSteps"></div>
+      <div class="dock" id="crDock">
+        <div id="dockIdle">
+          <div class="cap" id="dockCap">Tap once, then just talk</div>
+          <form class="typ" id="typForm" autocomplete="off"><input id="typ" placeholder="Or type it" enterkeyhint="send" aria-label="Or type it"><button class="go" type="submit">Go</button></form>
+          <button class="mic" id="micBtn" aria-label="Tap once, then talk"><svg viewBox="0 0 24 24" fill="none" stroke="#3ddc84" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+          <div class="tip" id="tip">Try: “Stop P-1.”</div>
+        </div>
+        <div id="dockOn" hidden>
+          
+          <div class="said" id="said"></div>
+          <div class="lvl" id="lvl"></div>
+          <button class="listen" id="stopBtn">Listening. Tap to stop.</button>
+        </div>
+        <div class="miss" id="miss"></div>
+      </div>
+      <div class="hint" id="crHint"></div>
+      <button class="bigbtn" id="crBtn" disabled>Send to field</button>
+    </div>
+    <div id="hoView" class="ho" hidden style="flex:1;overflow:auto"></div>
+  </section>
 
-<header class="top">
-  <div class="brand" role="img" aria-label="OpsThread"><span>Ops</span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 68 73" aria-hidden="true"><rect x="28.5" y="14" width="11" height="50" fill="#3DDC84"/><path d="M19 72 L34 50 L49 72 Z" fill="#3DDC84" stroke="#3DDC84" stroke-width="1.5" stroke-linejoin="round"/><rect x="20" y="12" width="28" height="6" fill="#3DDC84"/><path d="M1 1 L22 15 L1 29 Z" fill="#3DDC84" stroke="#3DDC84" stroke-width="1.5" stroke-linejoin="round"/><path d="M67 1 L46 15 L67 29 Z" fill="#3DDC84" stroke="#3DDC84" stroke-width="1.5" stroke-linejoin="round"/></svg><span>hread</span></div>
-  <nav class="tabs" aria-label="View">
-    <a href="#field" id="tab-field">Field phone</a>
-    <a href="#control" id="tab-control">Control room</a>
-  </nav>
-</header>
+  <!-- center stage -->
+  <section class="stage" id="stage">
+    <div class="roles">
+      <div class="rl" id="rlCR"><svg viewBox="0 0 40 40" fill="none" stroke="#e6ebea" stroke-width="2"><circle cx="20" cy="12" r="7"/><path d="M8 34c1-8 6-12 12-12s11 4 12 12z"/><path d="M4 36h32"/></svg><div><b>Control room</b><span></span></div></div>
+      <div class="rl r" id="rlFD"><svg viewBox="0 0 40 40" fill="none" stroke="#e6ebea" stroke-width="2"><path d="M9 17a11 11 0 0 1 22 0"/><path d="M6 17h28"/><path d="M20 6v5"/><path d="M12 20a8 8 0 0 0 16 0"/><path d="M8 37c1-6 6-9 12-9s11 3 12 9"/></svg><div><b>Field</b><span></span></div></div>
+    </div>
+    <div class="center">
+      <div class="eyebrow" id="eyebrow"></div>
+      <div class="headline" id="headline"></div>
+      <div class="sub" id="sub"></div>
+    </div>
+    <div class="flow"><div class="base"></div><div class="fbar" id="flowDone" style="width:0"></div><div class="nodes" id="nodes"></div></div>
+    <div class="narr" id="narr"></div>
+    <div class="dcs" id="dcs">
+      <div class="t">Control room DCS screen <i>(simulated)</i></div>
+      <div class="tag"><b id="dcsTag">FI-101</b><span id="dcsDesc">Unit B P-1 discharge flow</span></div>
+      <div class="row"><div><span class="val" id="dcsVal">119.5</span><span class="u">m³/h</span></div><svg viewBox="0 0 96 36" id="spark"><polyline id="sparkL" fill="none" stroke="#f2d533" stroke-width="1.5" points=""/></svg></div>
+    </div>
+  </section>
 
-<main id="field" aria-live="polite"></main>
-<main id="control" hidden></main>
+  <!-- field phone -->
+  <section class="phone" id="fdPhone" aria-label="Field phone">
+    <div class="ph-head"><span class="ot">OpsThread</span><span class="role"><svg width="12" height="11" viewBox="0 0 12 11" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M6 1l5 9H1z"/></svg>Field</span><span class="sp"></span><span class="live"></span><span class="clock">--:--</span></div>
+    <div id="fdMain" style="display:flex;flex-direction:column;flex:1;min-height:0"></div>
+  </section>
+</main>
+<div class="foot">Prototype, sample data</div>
+<div class="toast" id="toast"></div>
 
 <script>
-/* Sample data only: one site, two units that each have a pump tagged P-1. */
-const TAGS=[{tag:"P-1",unit:"Unit A",kind:"pump"},{tag:"P-1",unit:"Unit B",kind:"pump"},{tag:"FI-101",unit:"Unit B",kind:"flow meter"}];
-const $=(s,r=document)=>r.querySelector(s);
-const wait=ms=>new Promise(r=>setTimeout(r,ms));
-const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
-const T=ms=>reduce?Math.min(ms,150):ms;
+(function(){
+'use strict';
+var $=function(id){return document.getElementById(id)};
+var mobile=function(){return window.matchMedia('(max-width:999px)').matches};
 
-function trendSVG(level){ // level 1 = full flow, 0 = zero
-  const y=18+(1-level)*84;
-  return `<svg class="trend" viewBox="0 0 448 120" role="img" aria-label="FI-101 flow trend ${level>0?'still flowing':'at zero'}">
-  <line x1="0" y1="102" x2="448" y2="102" stroke="#2F383C" stroke-width="2"/>
-  <path d="M0 18 L200 18 L260 ${y} L448 ${y}" fill="none" stroke="${level>0?'#F2D533':'#3DDC84'}" stroke-width="5" stroke-linejoin="round"/>
-  <circle cx="440" cy="${y}" r="8" fill="${level>0?'#F2D533':'#3DDC84'}"/>
-  <text x="0" y="116" fill="#9AA5A9" font-family="IBM Plex Mono, monospace" font-size="13">FI-101 · flow</text></svg>`;
+/* ---------- valve icon ---------- */
+function valve(state,cls){
+  // state: done | now | todo | opt | optdone
+  var c=state==='done'?'#3ddc84':state==='now'?'#f2d533':'#5f6a6e';
+  var fill=(state==='done'||state==='now')?c:'none';
+  var dash=(state==='opt'||state==='optdone')?' stroke-dasharray="2 2"':'';
+  return '<svg class="vi '+(cls||'')+'" viewBox="0 0 30 24" fill="none"><path d="M3 3 L15 12 L3 21 Z M27 3 L15 12 L27 21 Z" fill="'+fill+'" stroke="'+c+'" stroke-width="1.8" stroke-linejoin="round"'+dash+'/></svg>';
 }
+var camSvg='<svg viewBox="0 0 14 12" fill="none" stroke="currentColor" stroke-width="1.1"><rect x="1" y="3" width="12" height="8" rx="1.5"/><circle cx="7" cy="7" r="2.3"/><path d="M4.5 3l1-2h3l1 2"/></svg>';
+var warnSvg='<svg width="11" height="10" viewBox="0 0 12 11" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M6 1l5 9H1z"/><path d="M6 4.5v2.5"/></svg>';
+var devSvg='<svg width="12" height="10" viewBox="0 0 13 11" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1" y="1" width="11" height="7" rx="1"/><path d="M4 10h5"/></svg>';
 
-/* ---------- Field phone: runs on its own, no sign-in, no network after load ---------- */
-const F=$('#field');
-let fieldRun=0;
-function fieldStart(){
-  fieldRun++;
-  F.innerHTML=`
-  <div class="pane fade">
-    <p class="label">Field phone · sample data</p>
-    <p class="big">You are the field operator.</p>
-    <p>The control room is about to radio you. Watch what OpsThread does, then tap <b>Done</b> on each step.</p>
-    <button class="btn primary" id="go">Start</button>
-  </div>`;
-  $('#go').onclick=()=>fieldPlay(fieldRun);
+/* ---------- state ---------- */
+// stage: 0 ready | 1 asking unit | 2 unit picked (say send) | 3 sent: field closes valve | 4 field: stop P-1 | 5 reported | 6 closed | 7 handover
+var S;
+function fresh(){
+  return {stage:0,unit:null,t:{},photo:'todo',flow:119.5,hist:[],listening:false,view:'cr',ho:false,lastHeard:''};
 }
-function add(html){const d=document.createElement('div');d.className='fade';d.innerHTML=html;F.appendChild(d);d.scrollIntoView({behavior:reduce?'auto':'smooth',block:'end'});return d;}
-async function fieldPlay(run){
-  F.innerHTML='';
-  const alive=()=>run===fieldRun;
-  add(`<div class="msg"><div class="who">Control room · radio</div><div class="say">“Stop P-1.”</div></div>`);
-  await wait(T(1400)); if(!alive())return;
-  add(`<div class="msg ops"><div class="who">OpsThread</div><div class="say">Two P-1s on the list. Unit A or Unit B?</div></div>`);
-  await wait(T(1600)); if(!alive())return;
-  add(`<div class="msg"><div class="who">Control room</div><div class="say">“Unit B.”</div></div>`);
-  await wait(T(1200)); if(!alive())return;
-  const card=add(`<section class="req">
-    <div class="label">New request</div>
-    <h2>STOP P-1 · UNIT B</h2>
-    <div class="step" id="s1"><span>1. Close the P-1 discharge valve</span><button class="btn" id="d1">Done</button></div>
-    <div class="step" id="s2"><span>2. Stop P-1</span><button class="btn" id="d2" disabled>Done</button></div>
-    <div id="st"><span class="chip open">Open<small>sent to you</small></span></div>
-  </section>`);
-  $('#d1',card).onclick=()=>{$('#s1',card).classList.add('done');$('#d1',card).disabled=true;$('#d2',card).disabled=false;$('#d2',card).focus();};
-  $('#d2',card).onclick=async()=>{
-    $('#s2',card).classList.add('done');$('#d2',card).disabled=true;
-    $('#st',card).innerHTML=`<span class="chip rep">Reported<small>waiting on FI-101</small></span>
-      <p class="note">Your “Done” is a report. The request stays open until the control room sees the reading.</p>`;
-    const tr=add(`<div class="pane"><div class="label">FI-101 on the control room’s screen</div><div id="tr">${trendSVG(1)}</div></div>`);
-    for(let i=1;i<=10;i++){await wait(T(260)); if(!alive())return; $('#tr',tr).innerHTML=trendSVG(Math.max(0,1-i/10));}
-    await wait(T(1200)); if(!alive())return;
-    add(`<div class="msg"><div class="who">Control room</div><div class="say">“FI-101 reads zero. Close.”</div></div>`);
-    await wait(T(900)); if(!alive())return;
-    $('#st',card).innerHTML=`<span class="chip closed">Closed<small>on the reading</small></span>`;
-    add(`<div class="pane"><p class="big" style="color:var(--green)">Closed on the reading, not on “Done.”</p>
-      <p class="note">If the flow had not dropped, the request would stay open and go to the top of the next shift’s handover.</p>
-      <div class="row"><button class="btn" id="again">Try again</button></div></div>`);
-    $('#again').onclick=fieldStart;
-  };
+S=fresh();
+for(var i=0;i<24;i++)S.hist.push(119+Math.random()*1.6);
+
+function hhmm(d){d=d||new Date();return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)}
+function mmss(ms){var s=Math.max(0,Math.floor(ms/1000));return Math.floor(s/60)+':'+('0'+s%60).slice(-2)}
+function U(){return S.unit==='A'?'Unit A':'Unit B'}
+function tag(){return S.unit==='A'?'FI-201':'FI-101'}
+
+/* ---------- copy per stage ---------- */
+function copy(){
+  var u=U(),T=tag();
+  switch(S.stage){
+    case 0:return{e:'Ready',h:'One tap. Then just talk.',s:'The control room phone keeps listening.',n:'',cr:'Your turn: speak',fd:'Nothing yet',turn:'cr'};
+    case 1:return{e:'OpsThread asks',h:'2 P-1s on the list.<br><span class="y">Which unit?</span>',s:'Only what is missing. Answer by voice.',n:'OpsThread asks: “Unit A or Unit B?”',ny:1,cr:'Your turn: say it',fd:'Nothing yet',turn:'cr'};
+    case 2:return{e:'Control room checks',h:u+'.<br><span class="g">Checked against the list.</span>',s:'Say “send”. Only the control room sends it.',n:'The control room said “'+u+'”.',cr:'Your turn: say send',fd:'Nothing yet',turn:'cr'};
+    case 3:return{e:'Sent to the field',h:'Sent.<br><span class="g">Same thread on both phones.</span>',s:'Sent '+((S.t.sent-S.t.card)/1000).toFixed(1)+' s after the card.',n:'The control room said send.',cr:'Waiting',fd:'Your turn: Close valve',turn:'fd'};
+    case 4:return{e:'The field works step by step',h:'<span class="g">Close the P-1 discharge valve ✓</span>',s:'Step 1 of 2 done. Next: Stop P-1.',n:'The field finished “Close the P-1 discharge valve”.',cr:'Waiting',fd:'Your turn: Stop P-1',turn:'fd'};
+    case 5:return{e:'Field reports',h:'Field taps Done:<br><span class="y">reported, not closed.</span>',s:'The control room checks '+T+' on its own DCS screen.',n:'The field tapped Done. Reported, not closed.',ny:1,cr:'Your turn: check',fd:'Reported',turn:'cr'};
+    case 6:return{e:'Closed by the control room',h:'<span class="g">'+T+' reads 0. Closed.</span>',s:'Said after its own DCS check.',n:'The control room said “'+T+' reads 0, close”.',cr:'Said it. Closed',fd:'Closed',turn:''};
+    case 7:return{e:'Shift change',h:'Anything still open<br><span class="y">tops the next shift’s handover.</span>',s:'Closed requests move below.',n:'Handover: 1 open, 1 standing, 1 closed.',ny:1,cr:'Handing over',fd:'Closed',turn:'cr'};
+  }
 }
 
-/* ---------- Control room: for the presenter's laptop ---------- */
-const C=$('#control');
-let cs;
-function ctlReset(){cs={step:0,unit:null,flow:1,status:'none',handover:[]};ctlRender();}
-function ctlRender(){
-  const s=cs;
-  const chip = s.status==='none'?'':
-    s.status==='open'?`<span class="chip open">Open<small>sent to the field</small></span>`:
-    s.status==='rep'?`<span class="chip rep">Reported<small>waiting on FI-101</small></span>`:
-    `<span class="chip closed">Closed<small>on the reading</small></span>`;
-  C.innerHTML=`
-  <section class="pane">
-    <div class="label">Control room · sample data</div>
-    ${s.step===0?`<p class="big">Talk like always.</p><p>Press and say the request. (In this demo the line is ready.)</p>
-       <div class="row"><button class="btn primary" id="say">Radio: “Stop P-1.”</button></div>`:''}
-    ${s.step>=1?`<dl class="fields"><dt>Action</dt><dd>Stop</dd><dt>Equipment</dt><dd>P-1</dd><dt>Unit</dt><dd style="color:${s.unit?'var(--fg)':'var(--green)'}">${s.unit||'?'}</dd></dl>`:''}
-    ${s.step===1?`<div class="msg ops"><div class="who">OpsThread</div><div class="say">Two P-1s on the list. Unit A or Unit B?</div></div>
-       <div class="row"><button class="btn" id="ua">Unit A</button><button class="btn" id="ub">Unit B</button></div>`:''}
-    ${s.step>=2?`<div><div class="label">Steps from the procedure</div><ol><li>Close the ${s.unit} P-1 discharge valve</li><li>Stop P-1 (${s.unit})</li></ol></div>`:''}
-    ${s.step===2?`<div class="row"><button class="btn primary" id="send">Send to field</button></div>`:''}
-    ${s.step===3?`<div class="row"><button class="btn" id="fdone">Field says “Done.”</button><span class="note">Tap when the field phone reports.</span></div>`:''}
-    ${chip}
-  </section>
-  <section class="pane">
-    <div class="label">FI-101 · ${s.unit||'Unit B'} discharge flow</div>
-    <div id="ctr">${trendSVG(s.flow)}</div>
-    ${s.status==='rep'?`<div class="row"><button class="btn primary" id="close" ${s.flow>0?'disabled':''}>FI-101 reads 0 · Close</button>
-       <button class="btn ghost" id="shift">Shift change now</button></div>
-       <p class="note">${s.flow>0?'Waiting for the flow to drop…':'The reading confirms it. Close the request.'}</p>`:''}
-    <div><div class="label">Next shift’s handover</div>
-      <ul class="ho">${s.handover.length?s.handover.map(h=>`<li>${h}</li>`).join(''):'<li class="note">Nothing open.</li>'}</ul></div>
-    <div class="row"><button class="btn ghost" id="reset">Reset demo</button></div>
-  </section>`;
-  const on=(id,fn)=>{const b=$('#'+id,C);if(b)b.onclick=fn;};
-  on('say',()=>{cs.step=1;ctlRender();});
-  on('ua',()=>{cs.unit='Unit A';cs.step=2;ctlRender();});
-  on('ub',()=>{cs.unit='Unit B';cs.step=2;ctlRender();});
-  on('send',()=>{cs.step=3;cs.status='open';ctlRender();});
-  on('fdone',async()=>{cs.step=4;cs.status='rep';ctlRender();
-     for(let i=1;i<=10;i++){await wait(T(300));if(cs.status!=='rep')return;cs.flow=Math.max(0,1-i/10);ctlRender();}});
-  on('close',()=>{cs.status='closed';cs.handover=[];ctlRender();});
-  on('shift',()=>{if(!cs.handover.length)cs.handover=[`Stop P-1 · ${cs.unit} — reported, not confirmed on FI-101`];ctlRender();});
-  on('reset',ctlReset);
+/* ---------- stage (center) ---------- */
+var NODES=[['Pick unit',1],['Send',2],['Tag photo<br>(optional)',-1],['Close valve',3],['Stop P-1',4],['Close on<br>reading',5]];
+function nodeState(i){
+  var st=S.stage;
+  // index of current node by stage
+  var cur={0:-1,1:0,2:1,3:3,4:4,5:5,6:99,7:99}[st];
+  if(i===2){return st>=3?(S.photo==='done'?'done':'opt'):'opt'}
+  if(cur===99||i<cur)return 'done';
+  if(i===cur)return 'now';
+  return 'todo';
+}
+function renderStage(){
+  var c=copy();
+  $('eyebrow').textContent=c.e;$('headline').innerHTML=c.h;$('sub').textContent=c.s;
+  var n=$('narr');n.textContent=c.n;n.className='narr'+(c.ny?' y':'');
+  $('rlCR').querySelector('span').textContent=c.cr;$('rlFD').querySelector('span').textContent=c.fd;
+  $('rlCR').classList.toggle('turn',c.turn==='cr');$('rlFD').classList.toggle('turn',c.turn==='fd');
+  $('crPhone').classList.toggle('turn',c.turn==='cr');$('fdPhone').classList.toggle('turn',c.turn==='fd');
+  $('mCR').querySelector('span').textContent=c.cr;$('mFD').querySelector('span').textContent=c.fd;
+  $('mCR').classList.toggle('turn',c.turn==='cr');$('mFD').classList.toggle('turn',c.turn==='fd');
+  var h='';
+  NODES.forEach(function(nd,i){var s=nodeState(i);h+='<div class="node '+(s==='now'?'now':s==='done'?'ok':'')+'">'+valve(s)+'<span>'+nd[0]+'</span></div>'});
+  $('nodes').innerHTML=h;
+  var pct={0:0,1:10,2:24,3:52,4:67,5:82,6:100,7:100}[S.stage];
+  $('flowDone').style.width=pct+'%';
+  $('dcs').classList.toggle('hot',S.stage===5);
+  document.body.classList.toggle('dcsOn',S.stage===5||S.stage===6);
+  $('dcsTag').textContent=tag();$('dcsDesc').textContent=U()+' P-1 discharge flow';
 }
 
-/* ---------- Views ---------- */
-function route(){
-  const v=location.hash==='#control'?'control':'field';
-  $('#field').hidden=v!=='field';$('#control').hidden=v!=='control';
-  $('#tab-field').setAttribute('aria-current',v==='field'?'page':'false');
-  $('#tab-control').setAttribute('aria-current',v==='control'?'page':'false');
+/* ---------- control room phone ---------- */
+var CR_STEPS=['Pick the unit','Send to field','Photo the tag','Close the P-1 discharge valve','Stop P-1','Close on FI-101 reads 0'];
+function crStepState(i){
+  var st=S.stage;
+  if(i===2)return S.photo==='done'?'optdone':'opt';
+  var cur={0:-1,1:0,2:1,3:3,4:4,5:5,6:99,7:99}[st];
+  if(st===0)return 'todo';
+  if(cur===99||i<cur)return 'done';
+  if(i===cur)return 'now';
+  return 'todo';
 }
-addEventListener('hashchange',route);
-fieldStart();ctlReset();route();
+function renderCR(){
+  var st=S.stage,card=$('crCard');
+  if(st===0){card.className='card';card.innerHTML='<div class="skel" style="width:40%;height:18px"></div><div class="skel" style="width:22%;margin-left:auto;margin-top:-28px;height:16px"></div><div class="unit" style="margin-top:22px">Unit <div class="skel" style="width:60px;margin:0"></div></div>'}
+  else{
+    card.className='card'+(st===1||st===2?' act':'')+(st>=3?' dim':'');
+    card.innerHTML='<div class="top"><div class="verb">STOP</div><div class="eq">P-1<small>PUMP</small></div></div><div class="unit">Unit '+(S.unit?'<span class="v">'+U()+'</span>':'<span class="q">?</span>')+'</div>';
+  }
+  var sh='',T=tag();
+  if(st===0){sh='<div class="skel" style="width:70%;margin:18px 10px"></div><div class="skel" style="width:55%;margin:18px 10px"></div><div class="skel" style="width:65%;margin:18px 10px"></div><div class="skel" style="width:50%;margin:18px 10px"></div><div class="skel" style="width:60%;margin:18px 10px"></div>'}
+  else{
+    CR_STEPS.forEach(function(name,i){
+      var s=crStepState(i),cls='st'+(s==='now'?' now':s==='done'?' ok':''),meta='';
+      if(i===5)name='Close on '+T+' reads 0';
+      if(i===2)meta='<span class="cam">'+camSvg+'optional</span>';
+      if((i===3||i===4)){
+        if(s==='done')meta='✓ '+warnSvg;
+        else if(s==='now')meta=warnSvg+' <span data-timer="'+(i===3?'sent':'valve')+'">0:00</span>';
+        else meta=warnSvg;
+      }
+      if(i<2&&s==='done')meta='✓';
+      if(s==='now'&&(i===0||i===1||i===5))meta='Now';
+      if(i===5&&st>=6)meta='✓';
+      sh+='<div class="'+cls+'">'+valve(s)+'<span class="tx">'+(i+1)+' '+name+'</span><span class="meta">'+meta+'</span></div>';
+      if(i===0&&st===1){
+        sh+='<div class="ask"><div class="q">OpsThread asks: <b>Unit A or Unit B?</b></div><div class="opts"><button data-unit="A" id="uA">Unit A</button><button data-unit="B" id="uB">Unit B</button></div><div class="h">2 P-1s on the list</div><div class="h2">Say “Unit A” or “Unit B”, or tap.</div></div>';
+      }
+    });
+  }
+  var box=$('crSteps');box.innerHTML=sh;box.className='steps'+(st>=1?' box':'');
+  // bottom
+  var b=$('crBtn'),hint=$('crHint');
+  b.className='bigbtn';b.disabled=true;hint.textContent='';
+  if(st<=1){b.textContent='Send to field'}
+  else if(st===2){b.textContent='Send to field';b.className='bigbtn go';b.disabled=false;hint.textContent='Say “send”, or tap.'}
+  else if(st===3||st===4){b.textContent='Sent. The field is on it.';b.className='bigbtn out'}
+  else if(st===5){b.textContent=T+' reads 0, close';b.className='bigbtn go';b.disabled=false;hint.textContent='Say “'+T+' reads 0, close”, or tap.'}
+  else if(st===6){b.textContent='Shift change: see the handover';b.className='bigbtn ghost';b.disabled=false;hint.textContent='Closed. Nothing left for this request.'}
+  else if(st===7){b.textContent='Run the demo again';b.className='bigbtn ghost';b.disabled=false}
+  // dock caption / tip
+  var tipMap={0:'Try: “Stop P-1.”',1:'Try: “Unit B.”',2:'Try: “Send.”',3:'The field is working. Switch to Field.',4:'The field is working. Switch to Field.',5:'Try: “'+T+' reads 0, close.”',6:'',7:''};
+  $('tip').textContent=tipMap[st];
+  $('crDock').hidden=(st===6||st===7);
+  $('typ').placeholder=st===0?'Or type it':'Or type it';
+  // handover
+  $('hoBtn').classList.toggle('on',S.ho);
+  $('crMain').hidden=S.ho;$('hoView').hidden=!S.ho;
+  if(S.ho)renderHO();
+}
+function renderHO(){
+  var st=S.stage,now=hhmm();
+  var cur=(st>=3&&st<6)?'<div class="it">'+valve('now')+'<div>R-02 '+U()+' · P-1 · Stop</div></div><div class="sm">'+(st===5?'Reported '+hhmm(new Date(S.t.reported))+', reading not checked':'Sent '+hhmm(new Date(S.t.sent))+', field working')+'</div>':'';
+  var closed=st>=6?'<div class="it">'+valve('done')+'<div>R-02 '+U()+' · P-1 · Stop</div></div><div class="sm">Closed '+hhmm(new Date(S.t.closed))+'. '+tag()+' reads 0, confirmed</div>':'<div class="sm" style="margin-left:0">None yet</div>';
+  $('hoView').innerHTML='<h3>Handover<small>to the next shift</small></h3>'+
+   '<div class="hob open"><div class="k">Open, needs confirmation</div>'+cur+'<div class="it">'+valve('now')+'<div>R-01 Unit A · P-1 · Start</div></div><div class="sm">Reported 21:43, reading not checked</div></div>'+
+   '<div class="hob"><div class="k">Standing orders</div><div class="it"><span style="width:18px;text-align:center">•</span><div>SO-01 Keep P-1 running during the rate change (sample)</div></div><div class="sm">Unit A</div></div>'+
+   '<div class="hob cl"><div class="k">Closed this shift</div>'+closed+'</div>'+
+   '<button class="bigbtn ghost" id="hoBack" style="margin-top:12px">Back to requests</button>'+(st===7?'<button class="bigbtn go" id="again2" style="margin-top:8px">Run the demo again</button>':'');
+}
+
+/* ---------- field phone ---------- */
+function renderFD(){
+  var st=S.stage,m=$('fdMain');
+  if(st<3){m.innerHTML='<div class="empty"><b>0</b><em>open</em><span>No requests for you</span></div>';return}
+  var T=tag(),dim=st>=5;
+  var h='<div class="freq'+(dim?' dim':'')+'"><div class="from">From the control room, '+hhmm(new Date(S.t.sent))+'</div><div class="u">'+U().toUpperCase()+'</div><div class="a">STOP <span>P-1</span><small>PUMP</small></div><div class="chk">Check the tag: '+U().toUpperCase()+' · P-1</div></div>';
+  h+='<div class="steps box">';
+  CR_STEPS.forEach(function(name,i){
+    var s,meta='',cls='st';
+    if(i===5)name='Close on '+T+' reads 0';
+    if(i<2){s='done';meta='✓ '+devSvg}
+    else if(i===2){s=S.photo==='done'?'optdone':'opt';meta='<button class="cam" id="camBtn" aria-label="Photo the tag (optional)">'+camSvg+(S.photo==='done'?'skipped':'optional')+'</button>'}
+    else if(i===3){s=st===3?'now':'done';meta=st===3?'Now':'✓'}
+    else if(i===4){s=st===4?'now':st>4?'done':'todo';meta=st===4?'Now':st>4?'✓':''}
+    else {s=st>=6?'done':st===5?'now':'todo';meta=st>=6?'✓ '+devSvg:devSvg}
+    if(s==='now')cls+=' now big';else if(s==='done')cls+=' ok';
+    h+='<div class="'+cls+'">'+valve(s)+'<span class="tx">'+(i+1)+' '+name+'</span><span class="meta">'+meta+'</span></div>';
+  });
+  h+='</div>';
+  if(st===3)h+='<button class="done" id="doneBtn"><b>DONE</b><span>Tap when the valve is closed</span></button>';
+  else if(st===4)h+='<button class="done" id="doneBtn"><b>DONE</b><span>Tap when P-1 is stopped</span></button>';
+  else if(st===5)h+='<div class="chip"><div class="lab"><b>REPORTED</b><span data-timer="reported">0:00</span></div><p>Waiting for the control room to check '+T+'.</p></div>';
+  else h+='<div class="chip cl"><div class="lab"><b>✓ CLOSED</b><span>'+hhmm(new Date(S.t.closed))+'</span></div><p>The control room confirmed '+T+' reads 0.</p></div>';
+  m.innerHTML=h;
+}
+
+/* ---------- mobile view switching ---------- */
+function setView(v,why){
+  S.view=v;
+  $('mCR').classList.toggle('view',v==='cr');$('mFD').classList.toggle('view',v==='fd');
+  $('crPhone').classList.toggle('mhide',v!=='cr');$('fdPhone').classList.toggle('mhide',v!=='fd');
+  if(why&&mobile())toast(why);
+  if(mobile())window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* ---------- render all ---------- */
+function render(){renderStage();renderCR();renderFD();tick()}
+
+/* ---------- transitions ---------- */
+function go(stage){
+  var prev=S.stage;S.stage=stage;var now=Date.now();
+  if(stage===1)S.t.card=now;
+  if(stage===3)S.t.sent=now;
+  if(stage===4)S.t.valve=now;
+  if(stage===5){S.t.reported=now}
+  if(stage===6)S.t.closed=now;
+  if(stage===7)S.ho=true;
+  $('said').textContent='';
+  render();
+  var c=copy();
+  if(mobile()&&c.turn&&c.turn!==S.view){
+    setTimeout(function(){setView(c.turn,c.turn==='fd'?'Field’s turn: the request is on the field phone.':'Control room’s turn.')},700);
+  }
+}
+function pickUnit(u){if(S.stage!==1)return;S.unit=u;go(2)}
+function send(){if(S.stage!==2)return;go(3)}
+function closeReq(){if(S.stage!==5)return false;if(S.flow>0.5){$('miss').textContent=tag()+' still reads '+S.flow.toFixed(1)+'. Close it on 0.';toast(tag()+' still reads '+S.flow.toFixed(1)+'. Wait for 0.');return false}go(6);return true}
+function reset(){stopListen();var v=S.view;S=fresh();for(var i=0;i<24;i++)S.hist.push(119+Math.random()*1.6);render();setView(mobile()?'cr':v);$('miss').textContent='';$('said').textContent=''}
+
+/* ---------- understanding what was said ---------- */
+function norm(t){return (' '+t.toLowerCase().replace(/[“”".,!?]/g,' ').replace(/-/g,' ').replace(/\s+/g,' ')+' ')}
+function understand(raw){
+  var t=norm(raw),ok=false;
+  var one='(1|one|won|wan)';
+  if(S.stage===0){
+    if(/ stop /.test(t)&&(new RegExp('(p|pee|pea|pe|pete|peak) ?'+one+' ').test(t)||/ p1 | p one /.test(t)||new RegExp(' '+one+' ').test(t))){ok=true;go(1)}
+  } else if(S.stage===1){
+    if(/ (unit )?(b|bee|be|beat|bea|v|bravo) /.test(t)&&/unit|bravo| b /.test(t)){ok=true;pickUnit('B')}
+    else if(/ (unit )?(a|eh|hey|8|alpha|ay) /.test(t)&&/unit|alpha| a /.test(t)){ok=true;pickUnit('A')}
+    else if(/ b /.test(t)){ok=true;pickUnit('B')}
+  } else if(S.stage===2){
+    if(/ (send|sent|sending|go ahead|send it) /.test(t)){ok=true;send()}
+  } else if(S.stage===5){
+    if(/(zero| 0 | 0\.0|close|closed|clothes)/.test(t)){ok=true;if(!closeReq())return true}
+  }
+  $('miss').textContent=ok?'':(S.stage===3||S.stage===4?'Heard “'+raw.trim()+'”. The field is working now; nothing changed.':'Heard “'+raw.trim()+'”. Not expected here, so nothing changed.');
+  return ok;
+}
+
+/* ---------- voice ---------- */
+var SR=window.SpeechRecognition||window.webkitSpeechRecognition,rec=null,want=false,levelT=null;
+function startListen(){
+  if(!SR){toast('Voice is not available in this browser. Type it, or use the buttons.');$('typ').focus();return}
+  want=true;S.listening=true;showDock();
+  try{
+    rec=new SR();rec.lang='en-US';rec.continuous=true;rec.interimResults=true;rec.maxAlternatives=3;
+    rec.onresult=function(e){
+      for(var i=e.resultIndex;i<e.results.length;i++){
+        var r=e.results[i],txt=r[0].transcript;
+        $('said').textContent=txt.trim();
+        if(r.isFinal){
+          var done=understand(txt);
+          if(!done){for(var k=1;k<r.length&&!done;k++){done=understand(r[k].transcript)}}
+          $('said').textContent=txt.trim();
+        }
+      }
+    };
+    rec.onerror=function(e){
+      if(e.error==='not-allowed'||e.error==='service-not-allowed'){want=false;stopListen();toast('Microphone blocked. Type it, or use the buttons.')}
+    };
+    rec.onend=function(){if(want&&S.listening){try{rec.start()}catch(_){}}else{S.listening=false;showDock()}};
+    rec.start();
+  }catch(err){want=false;S.listening=false;showDock();toast('Voice could not start. Type it, or use the buttons.')}
+}
+function stopListen(){want=false;S.listening=false;if(rec){try{rec.stop()}catch(_){}}showDock()}
+function showDock(){
+  $('dockIdle').hidden=S.listening;$('dockOn').hidden=!S.listening;
+  if(S.listening&&!levelT){levelT=setInterval(function(){var b=$('lvl').children;for(var i=0;i<b.length;i++)b[i].style.height=(4+Math.random()*12)+'px'},120)}
+  if(!S.listening&&levelT){clearInterval(levelT);levelT=null}
+}
+(function(){var h='';for(var i=0;i<10;i++)h+='<i></i>';$('lvl').innerHTML=h})();
+
+/* ---------- process value ---------- */
+function stepFlow(){
+  var target=S.stage>=5?0:119.6;
+  if(S.stage>=5){S.flow=S.flow>1?S.flow*0.4:0}
+  else{S.flow=target+(Math.random()-.5)*1.8}
+  S.hist.push(S.flow);if(S.hist.length>24)S.hist.shift();
+  var v=$('dcsVal');v.textContent=S.flow.toFixed(1);v.classList.toggle('zero',S.flow<0.05);
+  var pts=S.hist.map(function(y,i){return (i*4).toFixed(0)+','+(30-y/125*24).toFixed(1)}).join(' ');
+  var l=$('sparkL');l.setAttribute('points',pts);l.setAttribute('stroke',S.flow<0.05?'#3ddc84':'#f2d533');
+}
+function tick(){
+  var now=Date.now();
+  [].forEach.call(document.querySelectorAll('[data-timer]'),function(el){var k=el.getAttribute('data-timer');if(S.t[k])el.textContent=mmss(now-S.t[k])});
+  var c=hhmm();[].forEach.call(document.querySelectorAll('.clock'),function(el){el.textContent=c});
+}
+setInterval(stepFlow,700);setInterval(tick,500);
+
+/* ---------- toast ---------- */
+var tT;function toast(m){var t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(function(){t.classList.remove('on')},1900)}
+
+/* ---------- events (delegated so re-renders keep working) ---------- */
+document.addEventListener('click',function(e){
+  var b=e.target.closest('button');if(!b)return;
+  var id=b.id;
+  if(b.dataset.unit){pickUnit(b.dataset.unit);return}
+  if(b.dataset.v){setView(b.dataset.v);return}
+  switch(id){
+    case 'micBtn':startListen();break;
+    case 'stopBtn':stopListen();break;
+    case 'crBtn':
+      if(S.stage===2)send();else if(S.stage===5)closeReq();else if(S.stage===6)go(7);else if(S.stage===7)reset();break;
+    case 'doneBtn':
+      if(S.stage===3)go(4);else if(S.stage===4)go(5);break;
+    case 'camBtn':
+      if(S.photo!=='done'){S.photo='done';render();toast('Tag photo is optional. Skipped in this demo.')}break;
+    case 'hoBtn':S.ho=!S.ho;renderCR();break;
+    case 'hoBack':S.ho=false;if(S.stage===7){S.stage=6}render();break;
+    case 'again2':reset();break;
+  }
+});
+$('typForm').addEventListener('submit',function(e){
+  e.preventDefault();var v=$('typ').value.trim();if(!v)return;
+  $('said').textContent=v;
+  if(understand(v))$('typ').value='';
+});
+window.addEventListener('resize',function(){setView(S.view)});
+
+render();setView('cr');
+// test hook (no effect for users)
+window.__ops={get stage(){return S.stage},say:function(t){return understand(t)}};
+})();
 </script>
-</body></html>
+</body>
+</html>
