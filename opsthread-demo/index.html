@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow">
+<title>OpsThread Live Demo</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Geist:wght@400&family=Barlow+Semi+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>*{box-sizing:border-box}body{margin:0;background:#0b0e10}</style></head><body>
+<style>
+[hidden]{display:none!important}
+/* Layout: one screen per role. Field = a phone card stack; Control = a console with the request, the FI-101 trend and the handover list. */
+:root{
+  --bg:#0b0e10; --panel:#141a1d; --panel2:#1b2427; --line:#2f383c;
+  --fg:#e6ebea; --muted:#9aa5a9; --green:#3ddc84; --green-bg:#14201a;
+  --yellow:#f2d533; --yellow-bg:#1b1a10;
+  --f-display:'Barlow Semi Condensed','Arial Narrow',Arial,sans-serif;
+  --f-body:Barlow,Arial,sans-serif;
+  --f-mono:'IBM Plex Mono','Courier New',monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:17px;line-height:1.4;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 28px}
+*{box-sizing:border-box}
+button{font:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1100px;margin:0 auto 14px}
+.brand{display:flex;align-items:baseline;font-family:Geist,Arial,sans-serif;font-weight:400;font-size:26px;line-height:1;letter-spacing:-1.1px;color:#e6ebea}
+.brand svg{width:25px;height:27px;margin:0 1px}
+.tabs{display:flex;gap:6px}
+.tabs a{font-family:var(--f-mono);font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);text-decoration:none;padding:6px 10px;border:1px solid var(--line)}
+.tabs a[aria-current="page"]{color:var(--fg);border-color:var(--fg)}
+.label{font-family:var(--f-mono);font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+.note{font-size:14px;color:var(--muted)}
+.chip{display:inline-flex;flex-direction:column;gap:2px;padding:10px 14px;border:2px solid var(--line);font-weight:600}
+.chip small{font-weight:400;font-size:14px}
+.chip.open{border-color:var(--muted);color:var(--fg)}
+.chip.rep{border-color:var(--yellow);background:var(--yellow-bg);color:var(--yellow)}
+.chip.closed{border-color:var(--green);background:var(--green-bg);color:var(--green)}
+.btn{border:2px solid var(--fg);background:transparent;color:var(--fg);padding:12px 16px;font-weight:600}
+.btn.primary{background:var(--green);border-color:var(--green);color:var(--bg)}
+.btn:disabled{opacity:.35;cursor:default}
+.btn.ghost{border-color:var(--line);color:var(--muted)}
+
+/* Field phone */
+#field{max-width:440px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.msg{padding:12px 14px;background:var(--panel);border-left:4px solid var(--line)}
+.msg .who{font-family:var(--f-mono);font-size:11px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase}
+.msg .say{font-size:20px;font-weight:600}
+.msg.ops{border-left-color:var(--green)}
+.msg.ops .say{color:var(--green)}
+.req{background:var(--panel);border:1px solid var(--line);padding:16px;display:flex;flex-direction:column;gap:12px}
+.req h2{margin:0;font-family:var(--f-mono);font-size:18px;letter-spacing:1px}
+.step{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.step span{min-width:0}
+.step.done span{color:var(--muted);text-decoration:line-through}
+.trend{width:100%;height:auto;display:block}
+.fade{animation:in .35s ease both}
+@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.fade{animation:none}}
+
+/* Control room */
+#control{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px}
+@media (max-width:760px){#control{grid-template-columns:minmax(0,1fr)}}
+.pane{background:var(--panel);border:1px solid var(--line);padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.fields{display:grid;grid-template-columns:auto 1fr;gap:6px 18px;font-size:19px}
+.fields dt{color:var(--muted)} .fields dd{margin:0;font-family:var(--f-mono);font-weight:600}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.ho li{padding:6px 0;border-top:1px solid var(--line)}
+.ho{list-style:none;margin:0;padding:0}
+.big{font-family:var(--f-display);font-size:30px;font-weight:700;line-height:1.1;margin:0}
+</style>
+
+<header class="top">
+  <div class="brand" role="img" aria-label="OpsThread"><span>Ops</span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 68 73" aria-hidden="true"><rect x="28.5" y="14" width="11" height="50" fill="#3DDC84"/><path d="M19 72 L34 50 L49 72 Z" fill="#3DDC84" stroke="#3DDC84" stroke-width="1.5" stroke-linejoin="round"/><rect x="20" y="12" width="28" height="6" fill="#3DDC84"/><path d="M1 1 L22 15 L1 29 Z" fill="#3DDC84" stroke="#3DDC84" stroke-width="1.5" stroke-linejoin="round"/><path d="M67 1 L46 15 L67 29 Z" fill="#3DDC84" stroke="#3DDC84" stroke-width="1.5" stroke-linejoin="round"/></svg><span>hread</span></div>
+  <nav class="tabs" aria-label="View">
+    <a href="#field" id="tab-field">Field phone</a>
+    <a href="#control" id="tab-control">Control room</a>
+  </nav>
+</header>
+
+<main id="field" aria-live="polite"></main>
+<main id="control" hidden></main>
+
+<script>
+/* Sample data only: one site, two units that each have a pump tagged P-1. */
+const TAGS=[{tag:"P-1",unit:"Unit A",kind:"pump"},{tag:"P-1",unit:"Unit B",kind:"pump"},{tag:"FI-101",unit:"Unit B",kind:"flow meter"}];
+const $=(s,r=document)=>r.querySelector(s);
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const T=ms=>reduce?Math.min(ms,150):ms;
+
+function trendSVG(level){ // level 1 = full flow, 0 = zero
+  const y=18+(1-level)*84;
+  return `<svg class="trend" viewBox="0 0 448 120" role="img" aria-label="FI-101 flow trend ${level>0?'still flowing':'at zero'}">
+  <line x1="0" y1="102" x2="448" y2="102" stroke="#2F383C" stroke-width="2"/>
+  <path d="M0 18 L200 18 L260 ${y} L448 ${y}" fill="none" stroke="${level>0?'#F2D533':'#3DDC84'}" stroke-width="5" stroke-linejoin="round"/>
+  <circle cx="440" cy="${y}" r="8" fill="${level>0?'#F2D533':'#3DDC84'}"/>
+  <text x="0" y="116" fill="#9AA5A9" font-family="IBM Plex Mono, monospace" font-size="13">FI-101 · flow</text></svg>`;
+}
+
+/* ---------- Field phone: runs on its own, no sign-in, no network after load ---------- */
+const F=$('#field');
+let fieldRun=0;
+function fieldStart(){
+  fieldRun++;
+  F.innerHTML=`
+  <div class="pane fade">
+    <p class="label">Field phone · sample data</p>
+    <p class="big">You are the field operator.</p>
+    <p>The control room is about to radio you. Watch what OpsThread does, then tap <b>Done</b> on each step.</p>
+    <button class="btn primary" id="go">Start</button>
+  </div>`;
+  $('#go').onclick=()=>fieldPlay(fieldRun);
+}
+function add(html){const d=document.createElement('div');d.className='fade';d.innerHTML=html;F.appendChild(d);d.scrollIntoView({behavior:reduce?'auto':'smooth',block:'end'});return d;}
+async function fieldPlay(run){
+  F.innerHTML='';
+  const alive=()=>run===fieldRun;
+  add(`<div class="msg"><div class="who">Control room · radio</div><div class="say">“Stop P-1.”</div></div>`);
+  await wait(T(1400)); if(!alive())return;
+  add(`<div class="msg ops"><div class="who">OpsThread</div><div class="say">Two P-1s on the list. Unit A or Unit B?</div></div>`);
+  await wait(T(1600)); if(!alive())return;
+  add(`<div class="msg"><div class="who">Control room</div><div class="say">“Unit B.”</div></div>`);
+  await wait(T(1200)); if(!alive())return;
+  const card=add(`<section class="req">
+    <div class="label">New request</div>
+    <h2>STOP P-1 · UNIT B</h2>
+    <div class="step" id="s1"><span>1. Close the P-1 discharge valve</span><button class="btn" id="d1">Done</button></div>
+    <div class="step" id="s2"><span>2. Stop P-1</span><button class="btn" id="d2" disabled>Done</button></div>
+    <div id="st"><span class="chip open">Open<small>sent to you</small></span></div>
+  </section>`);
+  $('#d1',card).onclick=()=>{$('#s1',card).classList.add('done');$('#d1',card).disabled=true;$('#d2',card).disabled=false;$('#d2',card).focus();};
+  $('#d2',card).onclick=async()=>{
+    $('#s2',card).classList.add('done');$('#d2',card).disabled=true;
+    $('#st',card).innerHTML=`<span class="chip rep">Reported<small>waiting on FI-101</small></span>
+      <p class="note">Your “Done” is a report. The request stays open until the control room sees the reading.</p>`;
+    const tr=add(`<div class="pane"><div class="label">FI-101 on the control room’s screen</div><div id="tr">${trendSVG(1)}</div></div>`);
+    for(let i=1;i<=10;i++){await wait(T(260)); if(!alive())return; $('#tr',tr).innerHTML=trendSVG(Math.max(0,1-i/10));}
+    await wait(T(1200)); if(!alive())return;
+    add(`<div class="msg"><div class="who">Control room</div><div class="say">“FI-101 reads zero. Close.”</div></div>`);
+    await wait(T(900)); if(!alive())return;
+    $('#st',card).innerHTML=`<span class="chip closed">Closed<small>on the reading</small></span>`;
+    add(`<div class="pane"><p class="big" style="color:var(--green)">Closed on the reading, not on “Done.”</p>
+      <p class="note">If the flow had not dropped, the request would stay open and go to the top of the next shift’s handover.</p>
+      <div class="row"><button class="btn" id="again">Try again</button></div></div>`);
+    $('#again').onclick=fieldStart;
+  };
+}
+
+/* ---------- Control room: for the presenter's laptop ---------- */
+const C=$('#control');
+let cs;
+function ctlReset(){cs={step:0,unit:null,flow:1,status:'none',handover:[]};ctlRender();}
+function ctlRender(){
+  const s=cs;
+  const chip = s.status==='none'?'':
+    s.status==='open'?`<span class="chip open">Open<small>sent to the field</small></span>`:
+    s.status==='rep'?`<span class="chip rep">Reported<small>waiting on FI-101</small></span>`:
+    `<span class="chip closed">Closed<small>on the reading</small></span>`;
+  C.innerHTML=`
+  <section class="pane">
+    <div class="label">Control room · sample data</div>
+    ${s.step===0?`<p class="big">Talk like always.</p><p>Press and say the request. (In this demo the line is ready.)</p>
+       <div class="row"><button class="btn primary" id="say">Radio: “Stop P-1.”</button></div>`:''}
+    ${s.step>=1?`<dl class="fields"><dt>Action</dt><dd>Stop</dd><dt>Equipment</dt><dd>P-1</dd><dt>Unit</dt><dd style="color:${s.unit?'var(--fg)':'var(--green)'}">${s.unit||'?'}</dd></dl>`:''}
+    ${s.step===1?`<div class="msg ops"><div class="who">OpsThread</div><div class="say">Two P-1s on the list. Unit A or Unit B?</div></div>
+       <div class="row"><button class="btn" id="ua">Unit A</button><button class="btn" id="ub">Unit B</button></div>`:''}
+    ${s.step>=2?`<div><div class="label">Steps from the procedure</div><ol><li>Close the ${s.unit} P-1 discharge valve</li><li>Stop P-1 (${s.unit})</li></ol></div>`:''}
+    ${s.step===2?`<div class="row"><button class="btn primary" id="send">Send to field</button></div>`:''}
+    ${s.step===3?`<div class="row"><button class="btn" id="fdone">Field says “Done.”</button><span class="note">Tap when the field phone reports.</span></div>`:''}
+    ${chip}
+  </section>
+  <section class="pane">
+    <div class="label">FI-101 · ${s.unit||'Unit B'} discharge flow</div>
+    <div id="ctr">${trendSVG(s.flow)}</div>
+    ${s.status==='rep'?`<div class="row"><button class="btn primary" id="close" ${s.flow>0?'disabled':''}>FI-101 reads 0 · Close</button>
+       <button class="btn ghost" id="shift">Shift change now</button></div>
+       <p class="note">${s.flow>0?'Waiting for the flow to drop…':'The reading confirms it. Close the request.'}</p>`:''}
+    <div><div class="label">Next shift’s handover</div>
+      <ul class="ho">${s.handover.length?s.handover.map(h=>`<li>${h}</li>`).join(''):'<li class="note">Nothing open.</li>'}</ul></div>
+    <div class="row"><button class="btn ghost" id="reset">Reset demo</button></div>
+  </section>`;
+  const on=(id,fn)=>{const b=$('#'+id,C);if(b)b.onclick=fn;};
+  on('say',()=>{cs.step=1;ctlRender();});
+  on('ua',()=>{cs.unit='Unit A';cs.step=2;ctlRender();});
+  on('ub',()=>{cs.unit='Unit B';cs.step=2;ctlRender();});
+  on('send',()=>{cs.step=3;cs.status='open';ctlRender();});
+  on('fdone',async()=>{cs.step=4;cs.status='rep';ctlRender();
+     for(let i=1;i<=10;i++){await wait(T(300));if(cs.status!=='rep')return;cs.flow=Math.max(0,1-i/10);ctlRender();}});
+  on('close',()=>{cs.status='closed';cs.handover=[];ctlRender();});
+  on('shift',()=>{if(!cs.handover.length)cs.handover=[`Stop P-1 · ${cs.unit} — reported, not confirmed on FI-101`];ctlRender();});
+  on('reset',ctlReset);
+}
+
+/* ---------- Views ---------- */
+function route(){
+  const v=location.hash==='#control'?'control':'field';
+  $('#field').hidden=v!=='field';$('#control').hidden=v!=='control';
+  $('#tab-field').setAttribute('aria-current',v==='field'?'page':'false');
+  $('#tab-control').setAttribute('aria-current',v==='control'?'page':'false');
+}
+addEventListener('hashchange',route);
+fieldStart();ctlReset();route();
+</script>
+</body></html>
