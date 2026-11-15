@@ -553,12 +553,12 @@ var segView=Segmented($('segView'),[{k:'cr',label:'Control room'},{k:'fd',label:
 var segCR=Segmented($('segCR'),[{k:'req',label:'Requests'},{k:'ho',label:'Handover'}],function(k){S.ho=(k==='ho');if(!S.ho&&S.stage===7)S.stage=6;render()});
 
 /* ================= step progress ================= */
-var NODES=['Pick unit','Send','Tag photo<br>(optional)','Close valve','Stop P-1','Close on<br>reading'];
+var NODES=['Pick unit','Send','Close valve','Stop P-1','Close on<br>reading'];
 $('nodes').innerHTML=NODES.map(function(n){return '<div class="node"><span class="vw"></span><span class="nl">'+n+'</span></div>'}).join('');
 var nodeEls=[].slice.call(document.querySelectorAll('.node')),nodeScale=nodeEls.map(function(){return Motion.S(1,Motion.pair('--spring-pop'))}),barS=Motion.S(0,Motion.pair('--spring-settle')),prevNode=[];
 animator([barS].concat(nodeScale),function(){$('flowBar').style.transform='scaleX('+Math.max(0,barS.x)+')';nodeEls.forEach(function(n,i){n.firstChild.style.transform='scale('+nodeScale[i].x+')'})});
-function nodeState(i){var st=S.stage,cur={0:-1,1:0,2:1,3:3,4:4,5:5,6:99,7:99}[st];
-  if(i===2)return st>=3&&S.photo==='done'?'done':'opt';if(cur===99||i<cur)return 'done';if(i===cur)return 'now';return 'todo'}
+function nodeState(i){var st=S.stage,cur={0:-1,1:0,2:1,3:2,4:3,5:4,6:99,7:99}[st];
+  if(cur===99||i<cur)return 'done';if(i===cur)return 'now';return 'todo'}
 function renderStage(){
   var c=copy();
   $('eyebrow').textContent=c.e;$('headline').innerHTML=c.h;$('sub').textContent=c.s;
@@ -568,15 +568,15 @@ function renderStage(){
   $('crPhone').classList.toggle('turn',c.turn==='cr');$('fdPhone').classList.toggle('turn',c.turn==='fd');
   segView.status('cr',c.cr,c.turn==='cr');segView.status('fd',c.fd,c.turn==='fd');
   nodeEls.forEach(function(el,i){var s=nodeState(i);if(prevNode[i]!==s){el.querySelector('.vw').innerHTML=valve(s);el.className='node '+(s==='now'?'now':s==='done'?'ok':'');if(prevNode[i]!==undefined&&(s==='now'||s==='done')){nodeScale[i].x=.6;Motion.to(nodeScale[i],1)}prevNode[i]=s}});
-  Motion.to(barS,{0:0,1:.1,2:.24,3:.52,4:.67,5:.82,6:1,7:1}[S.stage]);
+  Motion.to(barS,{0:0,1:.08,2:.29,3:.51,4:.73,5:.94,6:1,7:1}[S.stage]);
   $('dcs').classList.toggle('hot',S.stage===5);
   document.body.classList.toggle('dcsOn',S.stage===5||S.stage===6);
   $('dcsTag').textContent=tag();$('dcsDesc').textContent=U()+' P-1 discharge flow';
 }
 
 /* ================= control room phone ================= */
-var STEPS=['Pick the unit','Send to field','Photo the tag','Close the P-1 discharge valve','Stop P-1','Close on FI-101 reads 0'];
-function crStepState(i){var st=S.stage;if(i===2)return S.photo==='done'?'optdone':'opt';var cur={0:-1,1:0,2:1,3:3,4:4,5:5,6:99,7:99}[st];if(st===0)return 'todo';if(cur===99||i<cur)return 'done';if(i===cur)return 'now';return 'todo'}
+var STEPS=['Pick the unit','Send to field','Close the P-1 discharge valve','Stop P-1','Close on FI-101 reads 0'];
+function crStepState(i){var st=S.stage;var cur={0:-1,1:0,2:1,3:2,4:3,5:4,6:99,7:99}[st];if(st===0)return 'todo';if(cur===99||i<cur)return 'done';if(i===cur)return 'now';return 'todo'}
 var crActFor=-1,slider=null,closer=null;
 function renderCR(){
   var st=S.stage,card=$('crCard'),T=tag();
@@ -588,12 +588,11 @@ function renderCR(){
   else if(st===0){box.className='steps';box.innerHTML='<div class="skel" style="width:70%;margin:18px 10px"></div><div class="skel" style="width:55%;margin:18px 10px"></div><div class="skel" style="width:65%;margin:18px 10px"></div><div class="skel" style="width:50%;margin:18px 10px"></div>'}
   else{var sh='';
     STEPS.forEach(function(name,i){var s=crStepState(i),cls='st'+(s==='now'?' now':s==='done'?' ok':''),meta='';
-      if(i===5)name='Close on '+T+' reads 0';
-      if(i===2)meta='<span class="cam">'+camSvg+'optional</span>';
-      if(i===3||i===4){meta=s==='done'?'✓ '+warnSvg:s==='now'?warnSvg+' <span data-timer="'+(i===3?'sent':'valve')+'">0:00</span>':warnSvg}
+      if(i===4)name='Close on '+T+' reads 0';
+      if(i===2||i===3){meta=s==='done'?'✓ '+warnSvg:s==='now'?warnSvg+' <span data-timer="'+(i===2?'sent':'valve')+'">0:00</span>':warnSvg}
       if(i<2&&s==='done')meta='✓';
-      if(s==='now'&&(i===0||i===1||i===5))meta='Now';
-      if(i===5&&st>=6)meta='✓';
+      if(s==='now'&&(i===0||i===1||i===4))meta='Now';
+      if(i===4&&st>=6)meta='✓';
       sh+='<div class="'+cls+'">'+valve(s)+'<span class="tx">'+(i+1)+' '+name+'</span><span class="meta">'+meta+'</span></div>';
       if(i===0&&st===1)sh+='<div class="ask"><div class="q">OpsThread asks: <b>Unit A or Unit B?</b></div><div class="opts"><button data-unit="A" id="uA">Unit A</button><button data-unit="B" id="uB">Unit B</button></div><div class="h">2 P-1s on the list</div><div class="h2">Say “Unit A” or “Unit B”, or tap.</div></div>'});
     box.innerHTML=sh;box.className='steps box'}
@@ -641,11 +640,10 @@ function renderFD(){
     act.innerHTML='';fdActFor=null;
   } else {
     fdTopFor='req';var dim=st>=5,h='<div class="freq'+(dim?' dim':'')+'"><div class="from">From the control room, '+hhmm(new Date(S.t.sent))+'</div><div class="u">'+U().toUpperCase()+'</div><div class="a">STOP <span>P-1</span><small>PUMP</small></div><div class="chk">Check the tag: '+U().toUpperCase()+' · P-1</div></div><div class="steps box">';
-    STEPS.forEach(function(name,i){var s,meta='',cls='st';if(i===5)name='Close on '+T+' reads 0';
+    STEPS.forEach(function(name,i){var s,meta='',cls='st';if(i===4)name='Close on '+T+' reads 0';
       if(i<2){s='done';meta='✓ '+devSvg}
-      else if(i===2){s=S.photo==='done'?'optdone':'opt';meta='<button class="cam" id="camBtn" aria-label="Photo the tag (optional)">'+camSvg+(S.photo==='done'?'skipped':'optional')+'</button>'}
-      else if(i===3){s=st===3?'now':'done';meta=st===3?'Now':'✓'}
-      else if(i===4){s=st===4?'now':st>4?'done':'todo';meta=st===4?'Now':st>4?'✓':''}
+      else if(i===2){s=st===3?'now':'done';meta=st===3?'Now':'✓'}
+      else if(i===3){s=st===4?'now':st>4?'done':'todo';meta=st===4?'Now':st>4?'✓':''}
       else{s=st>=6?'done':st===5?'now':'todo';meta=st>=6?'✓ '+devSvg:devSvg}
       if(s==='now')cls+=' now';else if(s==='done')cls+=' ok';
       h+='<div class="'+cls+'">'+valve(s)+'<span class="tx">'+(i+1)+' '+name+'</span><span class="meta">'+meta+'</span></div>'});
@@ -684,28 +682,62 @@ function send(){if(S.stage!==2||!slider)return;slider.confirm()}
 function closeReq(){if(S.stage!==5)return false;if(S.flow>.5){var m=tag()+' still reads '+S.flow.toFixed(1)+'. Close it on 0.';$('miss').textContent=m;toast(m);return false}if(closer)closer.complete();return true}
 function reset(){stopListen();var v=S.view;S=fresh();S.view=mobile()?'cr':v;crActFor=-1;fdTopFor=null;fdActFor=null;prevNode=[];render();setView(S.view)}
 
-/* ================= understanding speech / typing ================= */
-function norm(t){return ' '+t.toLowerCase().replace(/[“”".,!?]/g,' ').replace(/-/g,' ').replace(/\s+/g,' ')+' '}
-function understand(raw){
-  var t=norm(raw),ok=false,one='(1|one|won|wan)';
-  if(S.stage===0&&!S.busy){if(/ stop /.test(t)&&(new RegExp('(p|pee|pea|pe|pete|peak) ?'+one+' ').test(t)||/ p1 /.test(t)||new RegExp(' '+one+' ').test(t))){ok=true;heardStop()}}
-  else if(S.stage===1){if(/ (unit )?(b|bee|be|beat|bea|v|bravo) /.test(t)&&/unit|bravo| b /.test(t)){ok=true;pickUnit('B')}else if(/ (unit )?(a|eh|hey|8|alpha|ay) /.test(t)&&/unit|alpha| a /.test(t)){ok=true;pickUnit('A')}else if(/ b /.test(t)){ok=true;pickUnit('B')}}
-  else if(S.stage===2){if(/ (send|sent|sending|go ahead|send it) /.test(t)){ok=true;send()}}
-  else if(S.stage===5){if(/(zero| 0 | 0\.0|close|closed|clothes)/.test(t)){ok=true;closeReq();return true}}
-  $('miss').textContent=ok?'':(S.stage===3||S.stage===4?'Heard “'+raw.trim()+'”. The field is working now; nothing changed.':'Heard “'+raw.trim()+'”. Not expected here, so nothing changed.');
-  return ok;
+/* ================= understanding speech / typing =================
+   Only the words this step expects are accepted (the demo knows what comes next), and common
+   mishearings are mapped back: "stop pee won", "unit bee/v/d", "sand", "clothes"... */
+function norm(t){return ' '+t.toLowerCase().replace(/[“”"'.,!?:;]/g,' ').replace(/-/g,' ').replace(/(\d)/g,' $1 ').replace(/\s+/g,' ').trim()+' '}
+var W={
+  stop:/ (stop|stops|stopped|stopping|stap|stob|top|stuff|stomp|shop|start p) /,
+  p1:/ (p ?1|p one|pee ?(1|one|won)|pea ?(1|one|won)|pe ?(1|one)|pete ?(1|one)|key ?(1|one)|tea ?(1|one)|be ?(1|one)|people|pay ?(1|one)|pin|pee|p) /,
+  unitWord:/ (unit|units|you need|you knit|unite|you nit|unity|you ate|human|eunice|in it) /,
+  b:/ (b|bee|be|beat|bea|bean|beam|bead|v|vee|d|dee|e|bravo|the|me|we) /,
+  a:/ (a|ay|aye|eh|hey|8|eight|alpha|ate|age|ace) /,
+  bAlone:/^ (b|bee|be|bravo|v|vee) $/, aAlone:/^ (a|ay|eh|hey|8|eight|alpha) $/,
+  send:/ (send|sends|sent|sending|sand|sen|cent|scent|send it|sent it|go ahead|go|ok send|okay send|yes send|confirm) /,
+  close:/ (zero|0|0 0|o|oh|close|closed|closing|clothes|clause|confirmed|confirm|reads 0|reads zero|flows zero|flow zero|no flow) /
+};
+function intent(t){
+  if(S.stage===0&&!S.busy){if(W.stop.test(t)&&(W.p1.test(t)||/ (1|one|won) /.test(t)))return 'stop';if(/^ (stop|stop it|stop the pump|stop pump 1|stop pump one) $/.test(t))return 'stop';return null}
+  if(S.stage===1){
+    var m=t.match(/ (unit|units|you need|you knit|unite|you nit|unity|human|eunice|in it) (\S+) /);
+    if(m){var w=' '+m[2]+' ';if(W.b.test(w))return 'B';if(W.a.test(w))return 'A'}
+    if(W.bAlone.test(t)||/ bravo /.test(t)||/ unit ?b /.test(t))return 'B';
+    if(W.aAlone.test(t)||/ alpha /.test(t)||/ unit ?a /.test(t))return 'A';
+    if(/ (unity|unit be|unit bee) /.test(t))return 'B';
+    return null}
+  if(S.stage===2)return W.send.test(t)?'send':null;
+  if(S.stage===5)return W.close.test(t)?'close':null;
+  return null;
+}
+function act(k){if(k==='stop')heardStop();else if(k==='A'||k==='B')pickUnit(k);else if(k==='send')send();else if(k==='close')closeReq()}
+// interim: act early only when the step would succeed; final: act, or explain why nothing changed
+function understand(raw,interim){
+  var k=intent(norm(raw));
+  if(k&&interim&&k==='close'&&S.flow>.5)k=null;
+  if(k){act(k);$('miss').textContent=k==='close'&&S.flow>.5?$('miss').textContent:'';return true}
+  if(!interim)$('miss').textContent=(S.stage===3||S.stage===4)?'Heard “'+raw.trim()+'”. The field is working now; nothing changed.':'Heard “'+raw.trim()+'”. '+({0:'Say “Stop P-1.”',1:'Say “Unit B” or “Unit A.”',2:'Say “Send.”',5:'Say “'+tag()+' reads zero, close.”'}[S.stage]||'Nothing changed.');
+  return false;
 }
 
 /* ================= voice ================= */
-var SR=window.SpeechRecognition||window.webkitSpeechRecognition,rec=null,want=false,levelT=null;
+var SR=window.SpeechRecognition||window.webkitSpeechRecognition,rec=null,want=false,levelT=null,handled={},sess=0;
+var PHRASES=['Stop P-1','P-1','Unit A','Unit B','Send','FI-101 reads zero, close','close'];
 function startListen(){
   if(!SR){toast('Voice is not available in this browser. Type it, or use the buttons.');$('typ').focus();return}
   want=true;S.listening=true;showDock();
-  try{rec=new SR();rec.lang='en-US';rec.continuous=true;rec.interimResults=true;rec.maxAlternatives=3;
-    rec.onresult=function(e){for(var i=e.resultIndex;i<e.results.length;i++){var r=e.results[i],txt=r[0].transcript;$('said').textContent=txt.trim();
-      if(r.isFinal){var done=understand(txt);if(!done){for(var k=1;k<r.length&&!done;k++)done=understand(r[k].transcript)}$('said').textContent=txt.trim()}}};
+  try{rec=new SR();rec.lang='en-US';rec.continuous=true;rec.interimResults=true;rec.maxAlternatives=5;
+    // bias toward the words this demo uses, where the browser supports it
+    try{if(window.SpeechRecognitionPhrase&&'phrases' in rec)rec.phrases=PHRASES.map(function(p){return new SpeechRecognitionPhrase(p,5)})}catch(_){}
+    try{var G=window.SpeechGrammarList||window.webkitSpeechGrammarList;if(G){var g=new G();g.addFromString('#JSGF V1.0; grammar ops; public <c> = stop p one | unit a | unit b | send | zero | close ;',1);rec.grammars=g}}catch(_){}
+    sess++;handled={};
+    rec.onresult=function(e){for(var i=e.resultIndex;i<e.results.length;i++){var r=e.results[i],key=sess+':'+i,txt=r[0].transcript;
+      $('said').textContent=txt.trim();
+      if(handled[key])continue;
+      var done=false;for(var k=0;k<r.length&&!done;k++)done=understand(r[k].transcript,!r.isFinal);
+      if(done){handled[key]=true;$('said').textContent=txt.trim()}
+      else if(r.isFinal)understand(txt,false)}};
     rec.onerror=function(e){if(e.error==='not-allowed'||e.error==='service-not-allowed'){want=false;stopListen();toast('Microphone blocked. Type it, or use the buttons.')}};
-    rec.onend=function(){if(want&&S.listening){try{rec.start()}catch(_){}}else{S.listening=false;showDock()}};
+    rec.onend=function(){if(want&&S.listening){sess++;handled={};setTimeout(function(){if(want)try{rec.start()}catch(_){}},120)}else{S.listening=false;showDock()}};
     rec.start();
   }catch(err){want=false;S.listening=false;showDock();toast('Voice could not start. Type it, or use the buttons.')}
 }
