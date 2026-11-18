@@ -1,0 +1,915 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>OpsThread Live Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@500;600;700&family=Geist:wght@400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+[hidden]{display:none!important}
+:root{
+  --bg:#0b0e10; --bg2:#0f1416; --panel:#141a1d; --panel2:#1a2226; --line:#2a3337; --line2:#3a4448;
+  --fg:#e6ebea; --muted:#9aa5a9; --dim:#5f6a6e;
+  --green:#3ddc84; --green-bg:#11241a; --on-green:#06140c; --yellow:#f2d533; --yellow-bg:#1f1c0c;
+  --f:'Barlow',system-ui,sans-serif; --fc:'Barlow Semi Condensed','Barlow',sans-serif; --fm:'IBM Plex Mono',ui-monospace,monospace;
+  --r-btn:12px; --r-card:14px; --r-pill:999px;
+  --ease-out:cubic-bezier(.23,1,.32,1);
+  /* springs: "stiffness damping" (designbookmark shared tokens; Kokonut values noted where used) */
+  --spring-lead:620 36; --spring-settle:280 22; --spring-pop:520 16; --spring-fade:420 32;
+  --hold-ms:1200; --hold-release:260 14; --hold-morph:320 20; --hold-done-ms:1700;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--fg);font-family:var(--f);-webkit-font-smoothing:antialiased}
+body{min-height:100vh;min-height:100dvh;background:radial-gradient(ellipse at 50% 40%,#121a1c 0%,var(--bg) 70%)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+input{font:inherit;color:inherit}
+@media (prefers-reduced-motion:reduce){*{transition-duration:0s!important;animation-duration:0s!important}}
+
+/* ---------- desktop stage ---------- */
+.app{display:grid;grid-template-columns:auto 1fr auto;gap:28px;align-items:center;max-width:1440px;margin:0 auto;padding:24px 28px 30px;min-height:100vh;min-height:100dvh}
+.phone{width:350px;height:min(760px,calc(100dvh - 60px));min-height:620px;border:2px solid var(--line2);border-radius:38px;background:var(--bg2);padding:14px 12px 12px;display:flex;flex-direction:column;position:relative;transition:border-color .3s,box-shadow .3s;overflow:hidden}
+.phone.turn{border-color:var(--yellow);box-shadow:0 0 0 1px var(--yellow),0 0 40px rgba(242,213,51,.12)}
+.ph-head{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);padding:2px 6px 10px}
+.ph-head .ot{color:var(--fg);font-weight:500}
+.ph-head .role{display:flex;align-items:center;gap:4px;color:var(--fg)}
+.ph-head .sp{flex:1}
+.ph-head .clock{font-family:var(--fm)}
+.ph-head .live{width:7px;height:7px;border-radius:50%;background:var(--green)}
+
+.stage{display:flex;flex-direction:column;align-items:stretch;min-width:0;height:min(760px,calc(100dvh - 60px));min-height:620px}
+.roles{display:flex;justify-content:space-between;align-items:flex-start;padding:0 6px}
+.rl{display:flex;gap:12px;align-items:center}
+.rl.r{flex-direction:row-reverse;text-align:right}
+.rl svg{width:40px;height:40px;flex:none}
+.rl b{display:block;font-size:20px;font-weight:600}
+.rl span{display:block;font-size:14px;color:var(--muted)}
+.rl.turn span{color:var(--yellow)}
+.rl.turn svg *{stroke:var(--yellow)}
+.center{flex:1;display:flex;flex-direction:column;align-items:center;text-align:center;padding:26px 10px 0}
+.eyebrow{font-size:15px;color:var(--muted);margin-bottom:8px;min-height:20px}
+.headline{font-family:var(--fc);font-weight:600;font-size:clamp(30px,3.2vw,46px);line-height:1.1;min-height:2.2em}
+.headline .y{color:var(--yellow)}.headline .g{color:var(--green)}
+.sub{font-size:17px;opacity:.85;margin-top:12px;min-height:24px}
+/* step progress (designbookmark "Step progress", springs settle + pop) */
+.flow{position:relative;margin:30px -28px 0;height:84px}
+.flow .base,.flow .fbar{position:absolute;left:0;top:11px;height:3px}
+.flow .base{right:0;background:var(--line2)}
+.flow .fbar{width:100%;background:var(--green);transform-origin:0 50%;transform:scaleX(0)}
+.nodes{position:relative;display:flex;justify-content:space-between;padding:0 6%}
+.node{display:flex;flex-direction:column;align-items:center;gap:8px;width:90px;font-size:14px;color:var(--muted);line-height:1.15;transition:color .25s}
+.node .vw{background:var(--bg);padding:0 2px;will-change:transform}
+.node .vi{width:30px;height:24px;display:block}
+.node.now{color:var(--yellow)}.node.ok{color:var(--fg)}
+.narr{margin-top:22px;font-size:16px;min-height:22px}
+.narr.y{color:var(--yellow)}
+.dcs{position:relative;z-index:2;margin:22px auto 0;width:300px;border:1px dashed var(--line2);border-radius:6px;padding:12px 14px;text-align:left;transition:border-color .3s}
+.dcs.hot{border:2px solid var(--fg)}
+.dcs .t{font-size:12px;font-weight:600}.dcs .t i{font-style:normal;font-weight:400;color:var(--muted)}
+.dcs .tag{font-family:var(--fm);font-size:12px;color:var(--muted);margin-top:2px}.dcs .tag b{color:var(--fg);font-weight:500;margin-right:6px}
+.dcs .row{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-top:6px}
+.dcs .val{display:inline-block;font-family:var(--fm);font-size:34px;color:var(--yellow);transform-origin:0 80%;transition:color .3s}
+.dcs .val.zero{color:var(--green)}
+.dcs .u{font-size:13px;color:var(--muted);margin-left:6px}
+.dcs svg{width:96px;height:36px}
+.foot{position:fixed;right:14px;bottom:8px;font-size:11px;color:var(--dim)}
+
+/* ---------- segmented control (designbookmark, spring lead 620/36) ---------- */
+.seg{position:relative;display:flex;background:var(--panel);border-radius:var(--r-pill);padding:3px;gap:0;isolation:isolate}
+.seg .pill{position:absolute;top:3px;bottom:3px;left:0;border-radius:var(--r-pill);background:var(--fg);z-index:-1;will-change:transform,width}
+.seg button{flex:1;position:relative;padding:5px 12px;border-radius:var(--r-pill);font-size:11.5px;font-weight:600;color:var(--muted);transition:color .2s;white-space:nowrap}
+.seg button.on{color:var(--bg)}
+.seg button .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--yellow);margin-left:5px;vertical-align:1px;opacity:0;transition:opacity .2s}
+.seg button.turn .dot{opacity:1}
+.seg.big{padding:4px;border:1px solid var(--line2);background:var(--bg2)}
+.seg.big .pill{top:4px;bottom:4px;background:var(--panel2);box-shadow:inset 0 0 0 1.5px var(--fg)}
+.seg.big button{text-align:left;padding:7px 12px;border-radius:12px}
+.seg.big button,.seg.big button.on{color:var(--fg)}
+.seg.big .pill{border-radius:12px}
+.seg.big button b{display:block;font-size:14px}
+.seg.big button span{display:block;font-size:11.5px;font-weight:500;color:var(--muted)}
+.seg.big button.turn span{color:var(--yellow)}
+
+/* ---------- control room phone ---------- */
+.card{border:2px solid var(--line2);border-radius:var(--r-card);padding:12px 14px;background:var(--panel);min-height:96px;transition:border-color .3s}
+.card.act{border-color:var(--fg)}
+.card .top{display:flex;justify-content:space-between;align-items:flex-start}
+.card .verb{font-family:var(--fc);font-weight:700;font-size:34px;letter-spacing:1px;line-height:1}
+.card .eq{text-align:right;font-family:var(--fm);font-size:24px;line-height:1}
+.card .eq small{display:block;font-size:9px;color:var(--muted);letter-spacing:1px;margin-top:3px}
+.card .unit{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;color:var(--muted)}
+.card .unit .q{display:inline-grid;place-items:center;width:26px;height:24px;border:1.5px solid var(--yellow);border-radius:4px;color:var(--yellow);font-weight:700;font-size:15px}
+.card .unit .v{color:var(--green);font-size:17px;font-weight:600}
+.card.dim .verb,.card.dim .eq{color:var(--muted)}
+.skel{height:12px;border-radius:4px;background:var(--panel2);margin:10px 0}
+.steps{flex:1;overflow:auto;margin-top:10px;border-radius:var(--r-card);padding:4px 2px;-webkit-overflow-scrolling:touch}
+.steps.box{border:2px solid var(--line2);background:var(--bg2)}
+.st{display:flex;align-items:center;gap:8px;padding:9px 8px;font-size:13px;color:var(--muted)}
+.st .vi{width:20px;height:16px;flex:none}
+.st .tx{flex:1;min-width:0}
+.st .meta{font-size:11px;color:var(--muted);display:flex;gap:4px;align-items:center;font-family:var(--fm)}
+.st.ok .meta{color:var(--green)}
+.st.now{color:var(--yellow);font-size:15px;font-weight:600}
+.st.now .meta{color:var(--yellow)}
+.ask{margin:2px 6px 8px;border:1.5px solid var(--yellow);border-radius:10px;background:var(--yellow-bg);padding:10px}
+.ask .q{font-size:13px;color:var(--yellow);font-weight:600}.ask .q b{color:var(--fg)}
+.ask .opts{display:flex;gap:8px;margin:8px 0}
+.ask .opts button{flex:1;padding:11px 0;border-radius:8px;background:#0d1012;font-weight:600;font-size:14px;border:1px solid var(--line2)}
+.ask .opts button:active{background:var(--panel2)}
+.ask .h{font-size:10.5px;color:var(--muted)}.ask .h2{font-size:11px;color:var(--yellow);margin-top:2px}
+/* task list (SmoothUI AI task list) */
+.tl{padding:8px 10px}
+.tl .hd{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px}
+.tl .hd b{color:var(--fg);font-weight:600}
+.tl .hd span{font-family:var(--fm)}
+.tl .row{display:flex;gap:8px;align-items:flex-start;padding:6px 0;font-size:13.5px;position:relative;transition:opacity .25s cubic-bezier(.645,.045,.355,1),transform .25s cubic-bezier(.645,.045,.355,1)}
+.tl .row.done{opacity:.65;transform:translateY(1px)}
+.tl .box{width:14px;height:14px;flex:none;margin-top:2px}
+.tl .box rect{transition:fill-opacity .2s,stroke .2s}
+.tl .box path{stroke-dasharray:12;stroke-dashoffset:12;transition:stroke-dashoffset .3s cubic-bezier(.645,.045,.355,1)}
+.tl .row.done .box path{stroke-dashoffset:0}
+.tl .tx{position:relative;display:inline-block}
+.tl .row.run .tx::after{content:"";position:absolute;left:0;right:0;bottom:-2px;height:1.5px;background:linear-gradient(90deg,transparent,var(--green),transparent);background-size:50% 100%;background-repeat:no-repeat;opacity:.5;animation:under 1.4s cubic-bezier(.645,.045,.355,1) infinite}
+@keyframes under{from{background-position:-100% 0}to{background-position:200% 0}}
+.tl .sub2{font-size:11.5px;color:var(--muted);margin-left:22px;margin-top:-2px}
+/* voice dock */
+.dock{margin-top:8px;border:2px solid var(--line2);border-radius:var(--r-card);padding:10px;text-align:center;background:var(--bg2)}
+.dock .cap{font-family:var(--fm);font-size:11px;color:var(--muted)}
+.dock .typ{display:flex;gap:6px;margin:8px auto 0;max-width:250px}
+.dock input{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line2);border-radius:6px;padding:7px 9px;font-size:16px;text-align:center}
+.dock input::placeholder{color:var(--dim);font-size:13px}
+.dock .go{padding:0 10px;border-radius:6px;background:var(--panel2);border:1px solid var(--line2);font-size:13px}
+.mic{position:relative;width:52px;height:52px;border-radius:50%;border:2px solid var(--green);background:var(--green-bg);display:grid;place-items:center;margin:10px auto 2px}
+.mic::after{content:"";position:absolute;inset:-2px;border-radius:50%;border:2px solid var(--green);opacity:0;pointer-events:none;animation:micRing 2.4s var(--ease-out) infinite}
+@keyframes micRing{0%{opacity:.65;transform:scale(1)}70%,100%{opacity:0;transform:scale(1.5)}}
+.mic svg{width:22px;height:22px}
+.said{font-size:19px;font-weight:600;text-decoration:underline;text-decoration-color:var(--green);text-underline-offset:4px;min-height:26px;margin-top:2px;word-break:break-word}
+/* voice bars (Kokonut UI "Voice input": a scrolling waveform; here it moves when the browser reports speech) */
+.lvl{display:flex;gap:3px;justify-content:center;margin:6px 0 8px;height:22px;align-items:center}
+.lvl i{width:3px;height:22px;background:var(--green);border-radius:2px;transform:scaleY(.14);transition:transform .08s linear}
+.listen{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--green);border:1px solid var(--green);border-radius:99px;padding:6px 14px;background:var(--green-bg)}
+.listen::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 1.2s infinite}
+@keyframes blink{50%{opacity:.25}}
+.tip{font-size:11px;color:var(--muted);margin-top:6px}
+.miss{font-size:11.5px;color:var(--yellow);margin-top:4px;min-height:14px}
+.hint{font-size:12px;color:var(--muted);text-align:center;margin:8px 0 6px;min-height:15px}
+.act{min-height:56px}
+.bigbtn{display:block;width:100%;height:56px;border-radius:var(--r-btn);font-size:16px;font-weight:600;background:var(--panel);color:var(--dim);border:1px solid var(--line)}
+.bigbtn.ghost{background:var(--panel2);color:var(--fg);border-color:var(--line2)}
+.bigbtn.out{background:var(--green-bg);color:var(--green);border-color:var(--green)}
+.bigbtn.go{background:var(--green);color:var(--on-green);border-color:var(--green)}
+
+/* slide to confirm (Kokonut UI) */
+.slide{position:relative;height:56px;border-radius:var(--r-btn);background:var(--panel2);border:1px solid var(--line2);overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:pan-y}
+.slide .lab{position:absolute;inset:0;display:grid;place-items:center;font-size:15px;font-weight:600;color:var(--muted);pointer-events:none;padding-left:44px}
+.slide .shine{background:linear-gradient(90deg,var(--muted) 0%,var(--fg) 50%,var(--muted) 100%);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shine 2.4s linear infinite}
+@keyframes shine{from{background-position:100% 0}to{background-position:-100% 0}}
+.slide .fill{position:absolute;inset:0;background:var(--green);pointer-events:none}
+.slide .fl{position:absolute;inset:0;display:grid;place-items:center;font-size:15px;font-weight:700;color:var(--on-green);pointer-events:none}
+.slide .fl span{transition:opacity .26s var(--ease-out),transform .26s var(--ease-out),filter .26s var(--ease-out)}
+.slide .thumb{position:absolute;top:4px;left:4px;width:48px;height:46px;border-radius:9px;background:var(--fg);color:var(--bg);display:grid;place-items:center;cursor:grab;touch-action:none;will-change:transform}
+.slide .thumb:active{cursor:grabbing}
+.slide .thumb svg{position:absolute;width:20px;height:20px;transition:opacity .2s,transform .2s,filter .2s}
+.slide .ic-check{opacity:0;transform:scale(.5);color:#15803d}
+.slide .spin{opacity:0;border:2px solid rgba(11,14,16,.25);border-top-color:var(--bg);border-radius:50%;width:20px;height:20px;position:absolute;animation:spin .7s linear infinite;animation-play-state:paused;transition:opacity .2s}
+.slide.busy .ic-arrow,.slide.done .ic-arrow{opacity:0;transform:translateX(6px);filter:blur(2px)}
+.slide.busy .spin{opacity:1;animation-play-state:running;transition-delay:.1s}
+.slide.done .ic-check{opacity:1;transform:scale(1)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.slide.off{opacity:.5;pointer-events:none}
+
+/* hold button (Kokonut UI) */
+.hold{position:relative;display:block;width:100%;height:58px;border-radius:var(--r-card);background:var(--green);color:var(--on-green);overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:none;transition:background-color .15s,color .15s}
+.hold .fillh{position:absolute;inset:0;background:rgba(6,20,12,.28);transform-origin:0 50%;transform:scaleX(0);pointer-events:none}
+.hold .in{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;pointer-events:none}
+.hold b{font-family:var(--fc);font-size:28px;font-weight:700;letter-spacing:1px;line-height:1;display:flex;align-items:center;gap:8px}
+.hold span{font-size:12px;font-weight:500}
+.hold .sub{margin-top:2px;min-height:0}
+.hold .lbl{transition:opacity .2s var(--ease-out),transform .2s var(--ease-out),filter .2s var(--ease-out)}
+.hold .lbl.swap{opacity:0;transform:translateY(-6px);filter:blur(2px)}
+.hold svg.ck{width:22px;height:22px}
+.hold svg.ck path{stroke-dasharray:24;stroke-dashoffset:24;transition:stroke-dashoffset .3s var(--ease-out) .1s}
+.hold.complete svg.ck path{stroke-dashoffset:0}
+.hold.complete{background:#2fbf70}
+
+/* hold to publish (designbookmark: hold-ms 1200, release 260/14, morph 320/20, done 1700ms) */
+.htp{position:relative;margin:0 auto;display:flex;align-items:center;justify-content:center;gap:10px;height:56px;border-radius:var(--r-btn);background:var(--green);color:var(--on-green);font-weight:600;font-size:15.5px;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:none;will-change:width,border-radius}
+.htp .ring{width:24px;height:24px;flex:none}
+.htp .ring circle.p{transition:none}
+.htp .t{white-space:nowrap}
+.htp.off{background:var(--panel);color:var(--dim)}
+.htp.off .ring circle{stroke:var(--dim)}
+
+/* loading to success (designbookmark: settle 280/22 + pop 520/16) */
+.ls{position:relative;margin:0 auto;height:58px;border-radius:var(--r-card);background:var(--panel2);border:1.5px solid var(--yellow);color:var(--yellow);display:flex;align-items:center;justify-content:center;gap:10px;font-weight:600;font-size:15px;overflow:hidden;will-change:width}
+.ls .sp{width:20px;height:20px;border:2px solid rgba(242,213,51,.25);border-top-color:var(--yellow);border-radius:50%;animation:spin .7s linear infinite;flex:none}
+.ls .ok{width:22px;height:22px;flex:none;will-change:transform}
+.ls .t{white-space:nowrap}
+
+/* handover */
+.ho h3{font-family:var(--fc);font-size:22px;font-weight:700;padding:4px 4px 8px}.ho h3 small{font-family:var(--f);font-size:12px;font-weight:400;color:var(--muted);margin-left:6px}
+.hob{border-radius:10px;padding:10px;margin-bottom:8px;background:var(--panel);border:1px solid var(--line)}
+.hob.open{border:1.5px solid var(--yellow);background:var(--yellow-bg)}
+.hob .k{font-size:10.5px;font-weight:600;color:var(--muted);margin-bottom:6px}
+.hob.open .k{color:var(--yellow)}.hob.cl .k{color:var(--green)}
+.hob .it{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;margin-top:4px}
+.hob .it .vi{width:18px;height:14px;flex:none;margin-top:2px}
+.hob .sm{font-family:var(--fm);font-size:10.5px;color:var(--muted);margin:2px 0 0 26px}
+.hob.open .sm{color:var(--yellow)}.hob.cl .sm{color:var(--green);opacity:.85}
+
+/* ---------- field phone ---------- */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);padding:26px 0 14px}
+.empty b{font-family:var(--fm);font-size:40px;color:var(--green);font-weight:500;line-height:1}
+.empty span{font-size:13px}.empty em{font-style:normal;font-size:13px;margin-top:2px;font-weight:600;color:var(--fg)}
+/* notification stack (Kokonut UI: PEEK 10, scale .05/step, GAP 8, 300ms ease-out, snap spring 520 critical) */
+.ns{position:relative;transition:height .3s var(--ease-out);margin:4px 2px 0}
+.ns .nc{position:absolute;left:0;right:0;top:0;transform-origin:50% 0;transition:transform .3s var(--ease-out),opacity .3s var(--ease-out);touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.ns .nc.drag{transition:opacity .3s var(--ease-out)}
+.ncard{display:flex;gap:10px;background:var(--panel);border:1px solid var(--line2);border-radius:var(--r-card);padding:10px 12px;cursor:pointer}
+.ncard.new{border-color:var(--yellow);background:#191a10}
+.ncard .ic{width:30px;height:30px;border-radius:8px;background:var(--panel2);display:grid;place-items:center;flex:none}
+.ncard.new .ic{background:var(--yellow);color:#14130a}
+.ncard .bd{flex:1;min-width:0}
+.ncard .r1{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
+.ncard .r1 b{color:var(--fg);font-weight:600}
+.ncard.new .r1 b{color:var(--yellow)}
+.ncard .ti{font-size:14px;font-weight:600;margin-top:1px}
+.ncard .bo{font-size:12px;color:var(--muted);margin-top:1px;line-height:1.3}
+.ns-hint{font-size:11px;color:var(--dim);text-align:center;margin-top:8px;min-height:14px}
+.freq{border:2px solid var(--fg);border-radius:var(--r-card);padding:10px 12px;background:var(--panel)}
+.freq.dim{border-color:var(--line2)}
+.freq .from{font-size:11px;color:var(--yellow)}
+.freq.dim .from{color:var(--muted)}
+.freq .u{font-family:var(--fc);font-weight:700;font-size:44px;line-height:1.02;letter-spacing:1px}
+.freq .a{font-family:var(--fc);font-weight:700;font-size:28px;line-height:1}
+.freq .a span{font-family:var(--fm);font-weight:500}
+.freq .a small{font-size:11px;font-family:var(--fm);margin-left:6px}
+.freq .chk{font-size:12px;color:var(--yellow);font-weight:600;margin-top:5px}
+.freq.dim .u,.freq.dim .a{color:#c5cdcb}
+.chip{border-radius:var(--r-card);padding:12px;border:2px solid var(--yellow);background:var(--yellow-bg)}
+.chip .lab{display:flex;justify-content:space-between;align-items:center}
+.chip .lab b{background:var(--yellow);color:#14130a;border-radius:99px;padding:3px 10px;font-size:13px;font-weight:700;letter-spacing:.5px}
+.chip .lab span{font-family:var(--fm);font-size:12px;color:var(--yellow)}
+.chip p{font-size:13px;color:#e8e2b8;margin-top:8px}
+.chip.cl{border-color:var(--green);background:var(--green-bg)}
+.chip.cl .lab b{background:transparent;color:var(--green);border:1.5px solid var(--green)}
+.chip.cl .lab span{color:var(--green)}
+.chip.cl p{color:#c8eed8}
+.cam{display:inline-flex;align-items:center;gap:3px;font-size:10px;color:var(--muted);padding:3px 4px;border-radius:4px;border:1px solid transparent}
+.cam svg{width:14px;height:12px}
+#fdAct{margin-top:10px}
+
+.toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,20px);opacity:0;background:var(--panel2);border:1px solid var(--line2);color:var(--fg);padding:9px 16px;border-radius:99px;font-size:13px;transition:.25s;pointer-events:none;z-index:20;max-width:90vw;text-align:center}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* ---------- motion added 2026-11-18, rebuilt in plain CSS/JS after designbookmark.com/motion:
+   Streaming reply + Typewriter (words arrive one by one), Marker text, Thinking text, Word roll, Expand card ---------- */
+.wd{display:inline-block}
+@keyframes wIn{from{opacity:0;transform:translateY(.28em);filter:blur(6px)}}
+@keyframes sIn{from{opacity:0;filter:blur(5px)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(4px)}}
+.headline .wd{animation:wIn .5s var(--ease-out) backwards;animation-delay:calc(var(--i)*38ms)}
+.narr .wd{animation:wIn .4s var(--ease-out) backwards;animation-delay:calc(var(--i)*45ms + 120ms)}
+.swapin{animation:fadeUp .35s var(--ease-out) backwards}
+/* marker: a highlighter stroke drawn under the key phrase once its words have landed */
+.headline .mk{background-image:linear-gradient(var(--mk),var(--mk));background-repeat:no-repeat;background-position:0 90%;background-size:0% 30%;animation:mkIn .6s var(--ease-out) forwards;animation-delay:calc(var(--n)*38ms + 260ms)}
+.headline .y.mk{--mk:rgba(242,213,51,.24)}.headline .g.mk{--mk:rgba(61,220,132,.24)}
+@keyframes mkIn{to{background-size:100% 30%}}
+/* what the phone heard */
+.said .wd{display:inline}
+.said .wd.nw{animation:sIn .34s var(--ease-out) backwards;animation-delay:calc(var(--i)*45ms)}
+.said{transition:color .2s}
+.said.ok{color:var(--green)}
+.said.ok::after{content:"";display:inline-block;width:.6em;height:.32em;margin-left:.45em;border-left:2.5px solid var(--green);border-bottom:2.5px solid var(--green);transform:translateY(-.22em) rotate(-45deg);animation:okIn .4s var(--ease-out) backwards}
+@keyframes okIn{from{opacity:0;transform:translateY(-.22em) rotate(-45deg) scale(.3)}}
+/* typewriter caret */
+.typing::after{content:"";display:inline-block;width:2px;height:.95em;margin-left:2px;vertical-align:-.12em;background:currentColor;animation:blink 1s steps(1) infinite}
+/* thinking text: a soft light runs through words that are waiting on something */
+.shim{--sa:currentColor;--sb:#fff;background:linear-gradient(90deg,var(--sa) 0%,var(--sa) 36%,var(--sb) 50%,var(--sa) 64%,var(--sa) 100%);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:shine 2.4s linear infinite}
+.tl .hd .shim{--sa:#aab4b3;--sb:#fff}.chip .shim{--sa:#b9b38d;--sb:#fffbe0}.htp .shim{--sa:#5f6a6e;--sb:#d3dad8}
+/* rolling digits */
+.rc,.rc i{font-style:normal}
+.rc{display:inline-block;position:relative;width:calc(1ch + 1px);text-align:center;transition:width .28s var(--ease-out)}
+.rc.off{width:0}
+.rc.dn{--d:.5em}.rc.up{--d:-.5em}
+.rc .ro{position:absolute;left:0;right:0;top:0;animation:rOut .22s ease-in forwards}
+.rc .ri{display:inline-block;animation:rIn .3s var(--ease-out) backwards}
+@keyframes rOut{to{opacity:0;transform:translateY(var(--d));filter:blur(2px)}}
+@keyframes rIn{from{opacity:0;transform:translateY(calc(var(--d)*-1));filter:blur(2px)}}
+.dcs .val.zero{animation:valPop .55s var(--ease-out)}
+@keyframes valPop{0%{transform:scale(1)}35%{transform:scale(1.14)}100%{transform:scale(1)}}
+.dcs.cl{border:2px solid var(--green)}
+.dcs.zeroed{animation:zeroRing .9s var(--ease-out)}
+@keyframes zeroRing{0%{box-shadow:0 0 0 0 rgba(61,220,132,.55)}100%{box-shadow:0 0 0 18px rgba(61,220,132,0)}}
+/* the request travelling from the control room to the field */
+.flow .beam{position:absolute;left:0;top:7px;width:72px;height:11px;border-radius:11px;background:linear-gradient(90deg,rgba(61,220,132,0),rgba(61,220,132,.95));box-shadow:0 0 14px rgba(61,220,132,.5);opacity:0;pointer-events:none}
+/* logo (Ops + valve T + hread, Geist 400) */
+.roles{position:relative}
+.brand{position:absolute;left:50%;top:8px;transform:translateX(-50%);display:flex;flex-direction:row;align-items:baseline;font-family:'Geist',Arial,sans-serif;font-size:22px;font-weight:400;line-height:1;letter-spacing:-.9px;color:var(--fg);white-space:nowrap}
+.brand svg{width:21.4px;height:23.2px;flex:none}
+@media (max-width:1359px){.brand{display:none}}
+@media (prefers-reduced-motion:reduce){
+  .wd,.mk,.swapin,.said.ok::after{animation-delay:0s!important}
+  .shim{background:none;-webkit-text-fill-color:currentColor}
+  .mic::after,.typing::after{display:none}
+}
+
+/* ---------- mobile ---------- */
+.mbar{display:none}
+@media (max-width:999px){
+  body{background:var(--bg)}
+  .app{display:flex;flex-direction:column;padding:0;min-height:0}
+  .stage{order:-1;height:auto;min-height:0}
+  .roles,.narr,.foot,.eyebrow{display:none}
+  body:not(.dcsOn) .dcs{display:none}
+  .toast{bottom:calc(92px + env(safe-area-inset-bottom))}
+  .mbar{display:block;position:sticky;top:0;z-index:5;background:var(--bg);padding:max(10px,env(safe-area-inset-top)) 12px 6px}
+  .center{padding:4px 16px 0}
+  .headline{font-size:22px;min-height:0}
+  .sub{font-size:13.5px;margin-top:4px;min-height:0}
+  .flow{margin:10px 0 0;height:30px}
+  .nodes{padding:0 4%}
+  .node{width:auto;font-size:0;gap:0}
+  .node .vi{width:22px;height:18px}
+  .flow .base,.flow .fbar{top:8px}
+  .dcs{width:100%;max-width:360px;margin:6px auto 0;padding:8px 12px}
+  .dcs .val{font-size:26px}
+  .phone{width:100%;max-width:460px;height:auto;min-height:0;border:0;border-radius:0;box-shadow:none!important;background:transparent;padding:8px 12px max(16px,env(safe-area-inset-bottom));margin:0 auto;overflow:visible}
+  .phone.mhide{display:none}
+  .ph-head .ot,.ph-head .role,.ph-head .clock,.ph-head .live{display:none}
+  .ph-head{padding:0 0 8px}
+  .ph-head:empty,.fdh{display:none}
+  .steps{flex:none;overflow:visible}
+  .flow{height:26px}
+  #crAct,#fdAct{position:sticky;bottom:0;z-index:4;padding:8px 0 max(10px,env(safe-area-inset-bottom));background:linear-gradient(to top,var(--bg) 80%,rgba(11,14,16,0))}
+  #crAct:empty,#fdAct:empty,#crAct:has(button[disabled]){display:none}
+  .flow .beam{top:4px;width:44px}
+  body.dcsOn .dcs{animation:fadeUp .4s var(--ease-out) backwards}
+  body.dcsOn .dcs.zeroed{animation:zeroRing .9s var(--ease-out)}
+}
+</style>
+</head>
+<body>
+<div class="mbar"><div class="seg big" id="segView"></div></div>
+<main class="app">
+  <!-- control room phone -->
+  <section class="phone" id="crPhone" aria-label="Control room phone">
+    <div class="ph-head"><span class="ot">OpsThread</span><span class="role"><svg width="13" height="11" viewBox="0 0 13 11" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1" y="1" width="11" height="7" rx="1"/><path d="M4 10h5"/></svg>Control</span><span class="sp"></span><div class="seg" id="segCR" style="flex:none"></div></div>
+    <div id="crMain" style="display:flex;flex-direction:column;flex:1;min-height:0">
+      <div class="card" id="crCard"></div>
+      <div class="steps" id="crSteps"></div>
+      <div class="dock" id="crDock">
+        <div id="dockIdle">
+          <div class="cap">Tap once, then just talk</div>
+          <form class="typ" id="typForm" autocomplete="off"><input id="typ" placeholder="Or type it" enterkeyhint="send" aria-label="Or type it"><button class="go" type="submit">Go</button></form>
+          <button class="mic" id="micBtn" aria-label="Tap once, then talk"><svg viewBox="0 0 24 24" fill="none" stroke="#3ddc84" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+          <div class="tip" id="tip"></div>
+        </div>
+        <div id="dockOn" hidden>
+          <div class="said" id="said"></div>
+          <div class="lvl" id="lvl"></div>
+          <button class="listen" id="stopBtn">Listening. Tap to stop.</button>
+        </div>
+        <div class="miss" id="miss"></div>
+      </div>
+      <div class="hint" id="crHint"></div>
+      <div class="act" id="crAct"></div>
+    </div>
+    <div id="hoView" class="ho" hidden style="flex:1;overflow:auto"></div>
+  </section>
+
+  <!-- center stage -->
+  <section class="stage" id="stage">
+    <div class="roles">
+      <div class="rl" id="rlCR"><svg viewBox="0 0 40 40" fill="none" stroke="#e6ebea" stroke-width="2"><circle cx="20" cy="12" r="7"/><path d="M8 34c1-8 6-12 12-12s11 4 12 12z"/><path d="M4 36h32"/></svg><div><b>Control room</b><span></span></div></div>
+      <div class="brand" role="img" aria-label="OpsThread"><span>Ops</span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 68 73" aria-hidden="true"><rect x="28.5" y="14" width="11" height="50" fill="#3DDC84"/><path d="M19 72 L34 50 L49 72 Z" fill="#3DDC84" stroke="#3DDC84" stroke-width="1.5" stroke-linejoin="round"/><rect x="20" y="12" width="28" height="6" fill="#3DDC84"/><path d="M1 1 L22 15 L1 29 Z" fill="#3DDC84" stroke="#3DDC84" stroke-width="1.5" stroke-linejoin="round"/><path d="M67 1 L46 15 L67 29 Z" fill="#3DDC84" stroke="#3DDC84" stroke-width="1.5" stroke-linejoin="round"/></svg><span>hread</span></div>
+      <div class="rl r" id="rlFD"><svg viewBox="0 0 40 40" fill="none" stroke="#e6ebea" stroke-width="2"><path d="M9 17a11 11 0 0 1 22 0"/><path d="M6 17h28"/><path d="M20 6v5"/><path d="M12 20a8 8 0 0 0 16 0"/><path d="M8 37c1-6 6-9 12-9s11 3 12 9"/></svg><div><b>Field</b><span></span></div></div>
+    </div>
+    <div class="center">
+      <div class="eyebrow" id="eyebrow"></div>
+      <div class="headline" id="headline"></div>
+      <div class="sub" id="sub"></div>
+    </div>
+    <div class="flow" id="flow"><div class="base"></div><div class="fbar" id="flowBar"></div><div class="beam" id="beam"></div><div class="nodes" id="nodes"></div></div>
+    <div class="narr" id="narr"></div>
+    <div class="dcs" id="dcs">
+      <div class="t">Control room DCS screen <i>(simulated)</i></div>
+      <div class="tag"><b id="dcsTag">FI-101</b><span id="dcsDesc">Unit B P-1 discharge flow</span></div>
+      <div class="row"><div><span class="val" id="dcsVal">119.5</span><span class="u">m³/h</span></div><svg viewBox="0 0 96 36"><polyline id="sparkL" fill="none" stroke="#f2d533" stroke-width="1.5" points=""/></svg></div>
+    </div>
+  </section>
+
+  <!-- field phone -->
+  <section class="phone" id="fdPhone" aria-label="Field phone">
+    <div class="ph-head fdh"><span class="ot">OpsThread</span><span class="role"><svg width="12" height="11" viewBox="0 0 12 11" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M6 1l5 9H1z"/></svg>Field</span><span class="sp"></span><span class="live"></span><span class="clock">--:--</span></div>
+    <div id="fdTop" style="display:flex;flex-direction:column;flex:1;min-height:0"></div>
+    <div id="fdAct"></div>
+  </section>
+</main>
+<div class="foot">Prototype, sample data</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+var $=function(id){return document.getElementById(id)};
+var mobile=function(){return window.matchMedia('(max-width:999px)').matches};
+var reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+/* ================= spring engine (one rAF loop, 4 substeps, like designbookmark motion.js) ================= */
+var Motion=(function(){
+  var css=getComputedStyle(document.documentElement);
+  function pair(name){var v=css.getPropertyValue(name).trim().split(/\s+/).map(Number);return {k:v[0],c:v[1]}}
+  function num(name){return parseFloat(css.getPropertyValue(name))}
+  var items=new Set(),last=0,running=false;
+  function S(x,p){p=p||{k:620,c:36};if(reduce)p={k:p.k,c:2*Math.sqrt(p.k)};return {x:x,v:0,t:x,k:p.k,c:p.c,rest:true}}
+  function to(s,t,p,v){s.t=t;if(p){s.k=p.k;s.c=reduce?2*Math.sqrt(p.k):p.c}if(v!==undefined)s.v=v;s.rest=false;kick()}
+  function step(s,dt){if(s.rest)return;var a=-s.k*(s.x-s.t)-s.c*s.v;s.v+=a*dt;s.x+=s.v*dt;if(Math.abs(s.v)<.01&&Math.abs(s.x-s.t)<.005){s.x=s.t;s.v=0;s.rest=true}}
+  function add(fn){items.add(fn);kick();return function(){items.delete(fn)}}
+  function kick(){if(!running){running=true;last=performance.now();requestAnimationFrame(loop)}}
+  function loop(now){var dt=Math.min(.064,(now-last)/1000);last=now;var any=false;
+    items.forEach(function(fn){if(fn(dt/4,4))any=true});
+    if(any)requestAnimationFrame(loop);else running=false}
+  return {S:S,to:to,step:step,add:add,kick:kick,pair:pair,num:num};
+})();
+// helper: run springs through registered updaters (fn returns true while moving)
+function animator(springs,render){
+  return Motion.add(function(dt,n){var moving=false;for(var i=0;i<n;i++)springs.forEach(function(s){Motion.step(s,dt)});springs.forEach(function(s){if(!s.rest)moving=true});render();return moving});
+}
+function tween(dur,ease,cb,done){var t0=performance.now();function f(now){var p=Math.min(1,(now-t0)/dur);cb(ease?ease(p):p);if(p<1)requestAnimationFrame(f);else done&&done()}requestAnimationFrame(f)}
+function bez(x1,y1,x2,y2){return function(t){var lo=0,hi=1,m;for(var i=0;i<24;i++){m=(lo+hi)/2;var x=3*(1-m)*(1-m)*m*x1+3*(1-m)*m*m*x2+m*m*m;if(x<t)lo=m;else hi=m}return 3*(1-m)*(1-m)*m*y1+3*(1-m)*m*m*y2+m*m*m}}
+var EASE_OUT=bez(.23,1,.32,1),EASE_IN_OUT=bez(.65,0,.35,1);
+
+/* ================= Segmented control ================= */
+function Segmented(el,items,onPick,big){
+  el.innerHTML='<div class="pill"></div>'+items.map(function(it){return '<button type="button" data-k="'+it.k+'">'+(big?'<b>'+it.label+'</b><span></span>':it.label+'<i class="dot"></i>')+'</button>'}).join('');
+  var pill=el.querySelector('.pill'),btns=[].slice.call(el.querySelectorAll('button'));
+  var sx=Motion.S(0,Motion.pair('--spring-lead')),sw=Motion.S(0,Motion.pair('--spring-lead')),cur=null,first=true;
+  animator([sx,sw],function(){pill.style.transform='translateX('+sx.x+'px)';pill.style.width=sw.x+'px'});
+  function place(k,jump){var b=btns.filter(function(x){return x.dataset.k===k})[0];if(!b)return;var x=b.offsetLeft,w=b.offsetWidth;
+    if(jump||first||!w){sx.x=sx.t=x;sw.x=sw.t=w;sx.rest=sw.rest=false;Motion.kick();first=!w}else{Motion.to(sx,x);Motion.to(sw,w)}}
+  btns.forEach(function(b){b.addEventListener('click',function(){onPick(b.dataset.k)})});
+  return {set:function(k,jump){cur=k;btns.forEach(function(b){b.classList.toggle('on',b.dataset.k===k)});place(k,jump)},
+    status:function(k,txt,turn){var b=btns.filter(function(x){return x.dataset.k===k})[0];if(!b)return;b.classList.toggle('turn',!!turn);var s=b.querySelector('span');if(s)s.textContent=txt},
+    relayout:function(){if(cur)place(cur,true)}};
+}
+
+/* ================= Slide to confirm (Kokonut UI values) ================= */
+function SlideToConfirm(host,o){
+  var HEIGHT=56,INSET=4,THUMB=48,COMMIT_AT=.9,FLICK_SPEED=900,FLICK_FROM=.45,OVERDRAG=8;
+  host.innerHTML='<div class="slide" role="slider" aria-label="'+o.label+'"><div class="lab"><span class="shine">'+o.label+'</span></div><div class="fill"><div class="fl"><span>'+o.busyLabel+'</span></div></div><div class="thumb"><svg class="ic-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg><span class="spin"></span><svg class="ic-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div></div>';
+  var root=host.firstChild,thumb=root.querySelector('.thumb'),fill=root.querySelector('.fill'),lab=root.querySelector('.lab'),fl=root.querySelector('.fl span');
+  var sx=Motion.S(0,{k:520,c:42}),state='idle',max=function(){return root.clientWidth-INSET*2-THUMB};
+  function paint(){var m=max(),x=sx.x,p=m>0?Math.max(0,x)/m:0;thumb.style.transform='translateX('+x+'px)';fill.style.clipPath='inset(0 '+(root.clientWidth-(x+INSET+THUMB))+'px 0 0 round 11px)';fill.style.opacity=Math.min(1,p*1.6);lab.style.opacity=Math.max(0,1-p*1.4)}
+  animator([sx],paint);paint();
+  function band(raw,m){if(raw<0)return 0;if(raw<=m)return raw;var over=raw-m;return m+OVERDRAG*(1-Math.exp(-over/OVERDRAG/2))}
+  var drag=null;
+  thumb.addEventListener('pointerdown',function(e){if(state!=='idle'||root.classList.contains('off'))return;thumb.setPointerCapture(e.pointerId);drag={x0:e.clientX-sx.x,samples:[]};sx.rest=true});
+  thumb.addEventListener('pointermove',function(e){if(!drag)return;var raw=e.clientX-drag.x0;sx.x=sx.t=band(raw,max());drag.samples.push({t:e.timeStamp,x:sx.x});if(drag.samples.length>6)drag.samples.shift();paint()});
+  function up(){if(!drag)return;var s=drag.samples,v=0;if(s.length>1){var a=s[0],b=s[s.length-1];v=(b.x-a.x)/Math.max(1,b.t-a.t)*1000}drag=null;var p=sx.x/max();
+    if(p>=COMMIT_AT||(v>FLICK_SPEED&&p>FLICK_FROM))commit(v);else{Motion.to(sx,0,{k:520,c:42},v)}}
+  thumb.addEventListener('pointerup',up);thumb.addEventListener('pointercancel',up);
+  function commit(v,glide){if(state!=='idle')return;state='busy';
+    if(glide){var x0=sx.x,m=max();tween(reduce?0:420,EASE_IN_OUT,function(p){sx.x=sx.t=x0+(m-x0)*p;paint()})}else Motion.to(sx,max(),{k:520,c:42},v||0);
+    root.classList.add('busy');fl.textContent=o.busyLabel;
+    Promise.resolve(o.onConfirm&&o.onConfirm()).then(function(){state='done';root.classList.remove('busy');root.classList.add('done');swap(fl,o.doneLabel);o.onDone&&o.onDone()},function(){state='idle';root.classList.remove('busy');Motion.to(sx,0)})}
+  function swap(el,txt){el.style.opacity=0;el.style.transform='translateY(-8px)';el.style.filter='blur(2px)';setTimeout(function(){el.textContent=txt;el.style.transition='none';el.style.transform='translateY(8px)';void el.offsetWidth;el.style.transition='';el.style.opacity=1;el.style.transform='translateY(0)';el.style.filter='blur(0)'},130)}
+  // keyboard: Enter / Space confirms
+  thumb.tabIndex=0;thumb.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();commit(0,true)}});
+  return {confirm:function(){commit(0,true)},setDisabled:function(d){root.classList.toggle('off',d)},get state(){return state}};
+}
+
+/* ================= Hold button (Kokonut UI: hold 1200ms linear, drain progress*300ms ease-out, check draws 0.3s) ================= */
+function HoldButton(host,o){
+  var DRAIN_MS=300,HOLD=o.holdMs||1200;
+  host.innerHTML='<button type="button" class="hold"><span class="fillh"></span><span class="in"><b class="lbl">'+o.title+'</b><span class="lbl sub">'+o.label+'</span></span></button>';
+  var b=host.firstChild,fillEl=b.querySelector('.fillh'),title=b.querySelector('b'),sub=b.querySelector('.sub');
+  var p=0,raf=0,mode='idle',done=false;
+  function set(v){p=v;fillEl.style.transform='scaleX('+p+')'}
+  function stop(){cancelAnimationFrame(raf)}
+  function swapText(el,txt){el.classList.add('swap');setTimeout(function(){el.textContent=txt;el.classList.remove('swap')},150)}
+  function fill(){stop();mode='hold';swapText(sub,o.holdingLabel||'Keep holding');var from=p,t0=performance.now(),rem=(1-from)*HOLD;
+    (function f(now){var q=Math.min(1,from+(now-t0)/HOLD);set(q);if(q<1)raf=requestAnimationFrame(f);else complete()})(t0)}
+  function drain(){if(mode!=='hold')return;stop();mode='idle';swapText(sub,o.label);var from=p,dur=reduce?0:from*DRAIN_MS;tween(dur,EASE_OUT,function(q){if(mode==='idle')set(from*(1-q))})}
+  function complete(){if(done)return;done=true;mode='done';set(1);b.classList.add('complete');title.innerHTML=(o.doneTitle||'DONE')+'<svg class="ck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';swapText(sub,o.completeLabel||'Done');setTimeout(function(){o.onComplete&&o.onComplete()},o.afterMs||450)}
+  b.addEventListener('pointerdown',function(e){if(done)return;e.preventDefault();try{b.setPointerCapture(e.pointerId)}catch(_){}fill()});
+  b.addEventListener('pointerup',drain);b.addEventListener('pointercancel',drain);b.addEventListener('lostpointercapture',drain);
+  b.addEventListener('keydown',function(e){if((e.key===' '||e.key==='Enter')&&!e.repeat&&!done){e.preventDefault();fill()}});
+  b.addEventListener('keyup',function(e){if(e.key===' '||e.key==='Enter')drain()});
+  b.addEventListener('click',function(){if(!done&&mode!=='hold'&&p<.02)toast(o.tapHint||'Press and hold.')});
+  b.addEventListener('contextmenu',function(e){e.preventDefault()});
+  return {complete:complete,el:b};
+}
+
+/* ================= Hold to publish (designbookmark tokens: hold-ms, hold-release, hold-morph, hold-done-ms) ================= */
+function HoldToPublish(host,o){
+  var HOLD=Motion.num('--hold-ms'),REL=Motion.pair('--hold-release'),MORPH=Motion.pair('--hold-morph'),DONE_MS=Motion.num('--hold-done-ms');
+  var R=10,C=2*Math.PI*R;
+  host.innerHTML='<button type="button" class="htp"><svg class="ring" viewBox="0 0 24 24"><circle cx="12" cy="12" r="'+R+'" fill="none" stroke="rgba(6,20,12,.25)" stroke-width="2.5"/><circle class="p" cx="12" cy="12" r="'+R+'" fill="none" stroke="#06140c" stroke-width="2.5" stroke-linecap="round" transform="rotate(-90 12 12)" stroke-dasharray="'+C+'" stroke-dashoffset="'+C+'"/><path class="ck" d="M7.5 12.5l3 3 6-6.5" fill="none" stroke="#06140c" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="16" stroke-dashoffset="16"/></svg><span class="t">'+o.label+'</span></button>';
+  var b=host.firstChild,pc=b.querySelector('circle.p'),ck=b.querySelector('path.ck'),t=b.querySelector('.t');
+  var sp=Motion.S(0,REL),sw=Motion.S(1,MORPH),sc=Motion.S(1,Motion.pair('--spring-pop')),holding=false,done=false,t0=0,raf=0,disabled=false;
+  function paint(){pc.setAttribute('stroke-dashoffset',C*(1-Math.max(0,Math.min(1,sp.x))));b.style.width=(sw.x*100)+'%';b.style.transform='scale('+sc.x+')'}
+  animator([sp,sw,sc],paint);paint();
+  function down(e){if(done||disabled){if(disabled)o.onBlocked&&o.onBlocked();return}e&&e.preventDefault();if(e)try{b.setPointerCapture(e.pointerId)}catch(_){}
+    holding=true;sp.rest=true;var from=Math.max(0,sp.x);t0=performance.now()-from*HOLD;Motion.to(sc,.97);t.textContent=o.holdingLabel;
+    (function f(now){if(!holding)return;var q=Math.min(1,(now-t0)/HOLD);sp.x=sp.t=q;paint();if(q<1)raf=requestAnimationFrame(f);else finish()})(performance.now())}
+  function up(){if(!holding)return;holding=false;cancelAnimationFrame(raf);if(done)return;Motion.to(sp,0,REL);Motion.to(sc,1);t.textContent=o.label}
+  function finish(){if(done)return;done=true;holding=false;sp.x=sp.t=1;Motion.to(sc,1);Motion.to(sw,.62,MORPH);ck.style.transition='stroke-dashoffset .3s cubic-bezier(.23,1,.32,1) .1s';ck.setAttribute('stroke-dashoffset','0');pc.style.opacity=0;t.textContent=o.doneLabel;setTimeout(function(){o.onComplete&&o.onComplete()},Math.min(DONE_MS,600))}
+  b.addEventListener('pointerdown',down);b.addEventListener('pointerup',up);b.addEventListener('pointercancel',up);b.addEventListener('lostpointercapture',up);
+  b.addEventListener('keydown',function(e){if((e.key===' '||e.key==='Enter')&&!e.repeat){e.preventDefault();down()}});b.addEventListener('keyup',function(e){if(e.key===' '||e.key==='Enter')up()});
+  b.addEventListener('contextmenu',function(e){e.preventDefault()});
+  return {complete:function(){if(done)return;holding=true;sp.rest=true;var t1=performance.now(),from=sp.x;(function f(now){var q=Math.min(1,from+(now-t1)/450);sp.x=sp.t=q;paint();if(q<1)requestAnimationFrame(f);else finish()})(t1)},
+    setDisabled:function(d,label){disabled=d;b.classList.toggle('off',d);t.classList.toggle('shim',!!d&&!done);if(!holding&&!done)t.textContent=d&&label?label:o.label}};
+}
+
+/* ================= Loading to success (designbookmark: settle 280/22 width, pop 520/16 check) ================= */
+function LoadingSuccess(host,o){
+  host.innerHTML='<div class="ls"><span class="sp"></span><svg class="ok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span class="t">'+o.loading+'</span></div>';
+  var el=host.firstChild,sp=el.querySelector('.sp'),ok=el.querySelector('.ok'),t=el.querySelector('.t');
+  var sw=Motion.S(100,Motion.pair('--spring-settle')),sc=Motion.S(0,Motion.pair('--spring-pop'));
+  animator([sw,sc],function(){el.style.width=sw.x+'%';ok.style.transform='scale('+Math.max(0,sc.x)+')'});
+  Motion.to(sw,72);
+  setTimeout(function(){sp.style.display='none';ok.style.display='';t.textContent=o.done;Motion.to(sw,100);Motion.to(sc,1);setTimeout(function(){o.onDone&&o.onDone()},650)},o.ms||800);
+}
+
+/* ================= Notification stack (Kokonut UI values) ================= */
+function NotificationStack(host,items,o){
+  var PEEK=10,VISIBLE_BEHIND=2,GAP=8,DISMISS_DISTANCE=100,DISMISS_VELOCITY=.11,K=520,CD=2*Math.sqrt(520);
+  host.innerHTML='<div class="ns"></div><div class="ns-hint">'+(o.hint||'')+'</div>';
+  var wrap=host.firstChild,list=items.slice(),expanded=false,nodes={};
+  function cardHTML(n){return '<div class="ncard'+(n.isNew?' new':'')+'"><div class="ic">'+(n.icon||'')+'</div><div class="bd"><div class="r1"><b>'+n.app+'</b><span>'+n.time+'</span></div><div class="ti">'+n.title+'</div><div class="bo">'+n.body+'</div></div></div>'}
+  function build(n){var d=document.createElement('div');d.className='nc';d.dataset.id=n.id;d.innerHTML=cardHTML(n);wrap.appendChild(d);nodes[n.id]={el:d,x:0};wire(d,n);return d}
+  function layout(){var hs=list.map(function(n){return nodes[n.id].el.offsetHeight||76}),front=hs[0]||0,total;
+    if(expanded){total=hs.reduce(function(a,b){return a+b},0)+Math.max(list.length-1,0)*GAP}else total=front+Math.min(list.length-1,VISIBLE_BEHIND)*PEEK;
+    wrap.style.height=(list.length?total:0)+'px';var run=0;
+    list.forEach(function(n,depth){var nd=nodes[n.id],sc=expanded?1:1-depth*.05,y=expanded?run:front+depth*PEEK-hs[depth]*sc;run+=hs[depth]+GAP;
+      nd.y=y;nd.sc=sc;nd.el.style.zIndex=list.length-depth;nd.el.style.opacity=(!expanded&&depth>VISIBLE_BEHIND)?0:Math.max(1-Math.abs(nd.x)/240,.3);paint(n.id)})}
+  function paint(id){var nd=nodes[id];nd.el.style.transform='translate('+nd.x+'px,'+nd.y+'px) scale('+nd.sc+')'}
+  function wire(d,n){var g=null;
+    d.addEventListener('pointerdown',function(e){g={x0:e.clientX,y0:e.clientY,dx:0,lock:null,s:[]};try{d.setPointerCapture(e.pointerId)}catch(_){}});
+    d.addEventListener('pointermove',function(e){if(!g)return;var dx=e.clientX-g.x0,dy=e.clientY-g.y0;if(!g.lock&&(Math.abs(dx)>6||Math.abs(dy)>6))g.lock=Math.abs(dx)>Math.abs(dy)?'x':'y';if(g.lock!=='x')return;g.dx=dx;g.s.push({t:e.timeStamp,x:dx});if(g.s.length>8)g.s.shift();d.classList.add('drag');nodes[n.id].x=dx;d.style.opacity=Math.max(1-Math.abs(dx)/240,.3);paint(n.id)});
+    function end(){if(!g)return;var gg=g;g=null;d.classList.remove('drag');
+      if(gg.lock!=='x'){ if(n.onOpen){n.onOpen()}else{expanded=!expanded;layout()} return}
+      var s=gg.s,v=0;if(s.length>1){v=(s[s.length-1].x-s[0].x)/Math.max(1,s[s.length-1].t-s[0].t)}
+      var dir=Math.abs(gg.dx)>DISMISS_DISTANCE?Math.sign(gg.dx):Math.abs(v)>DISMISS_VELOCITY?Math.sign(v):0;
+      if(dir){fly(n,dir,v)}else snap(n,v)}
+    d.addEventListener('pointerup',end);d.addEventListener('pointercancel',end)}
+  function snap(n,v){var nd=nodes[n.id],s=Motion.S(nd.x,{k:K,c:CD});s.v=v*1000;Motion.to(s,0);var off=animator([s],function(){nd.x=s.x;paint(n.id);nd.el.style.opacity=Math.max(1-Math.abs(s.x)/240,.3);if(s.rest)off()})}
+  function fly(n,dir,v){var nd=nodes[n.id],dist=nd.el.offsetWidth*1.1*dir,x0=nd.x;tween(200,EASE_OUT,function(p){nd.x=x0+(dist-x0)*p;nd.el.style.opacity=1-p;paint(n.id)},function(){nd.el.remove();delete nodes[n.id];list=list.filter(function(m){return m.id!==n.id});layout();o.onDismiss&&o.onDismiss(n)})}
+  list.forEach(build);requestAnimationFrame(layout);
+  wrap.addEventListener('mouseenter',function(){if(!expanded){expanded=true;layout()}});wrap.addEventListener('mouseleave',function(){if(expanded){expanded=false;layout()}});
+  return {push:function(n){list.unshift(n);var d=build(n);nodes[n.id].y=-30;nodes[n.id].sc=1;d.style.opacity=0;paint(n.id);requestAnimationFrame(function(){requestAnimationFrame(layout)})},relayout:layout};
+}
+
+/* ================= Task list (SmoothUI AI task list: done rows opacity .65 y+1, check draws, underline 1.4s) ================= */
+function TaskList(host,title,tasks,onDone){
+  host.innerHTML='<div class="tl"><div class="hd"><b class="shim">'+title+'</b><span class="ct">0/'+tasks.length+'</span></div>'+tasks.map(function(t,i){return '<div class="row" data-i="'+i+'"><svg class="box" viewBox="0 0 14 14"><rect x=".75" y=".75" width="12.5" height="12.5" rx="3.5" fill="#3ddc84" fill-opacity="0" stroke="#3a4448" stroke-width="1.5"/><path d="M 3.5 7.5 L 6 10 L 10.5 4.5" fill="none" stroke="#3ddc84" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><div><span class="tx">'+t.label+'</span>'+(t.sub?'<div class="sub2">'+t.sub+'</div>':'')+'</div></div>'}).join('')+'</div>';
+  var rows=host.querySelectorAll('.row'),ct=host.querySelector('.ct'),i=0;
+  function next(){if(i>0){var r=rows[i-1];r.classList.remove('run');r.classList.add('done');var rc=r.querySelector('rect');rc.setAttribute('fill-opacity','.12');rc.setAttribute('stroke','#3ddc84');ct.textContent=i+'/'+tasks.length}
+    if(i<rows.length){rows[i].classList.add('run');i++;setTimeout(next,reduce?0:(tasks[i-1].ms||320))}else setTimeout(onDone,reduce?0:380)}
+  next();
+}
+
+/* ================= text motion (after designbookmark.com/motion: Streaming reply, Typewriter, Marker text) ================= */
+// headline: each word rises in; at "reported, not closed" and "Closed" the key phrase gets a marker stroke
+var headNow=null,narrNow=null;
+function setHead(html){
+  if(html===headNow)return;headNow=html;var i=0,el=$('headline');
+  el.innerHTML=html.replace(/(<[^>]+>)|([^<\s]+)/g,function(m,tag,word){return tag||'<span class="wd" style="--i:'+(i++)+'">'+word+'</span>'});
+  if(S.stage===5||S.stage===6){var k=el.querySelector('.y,.g');if(k){k.classList.add('mk');k.style.setProperty('--n',i)}}
+}
+function setText(el,t){if(el.textContent===t)return;el.textContent=t;if(reduce)return;el.classList.remove('swapin');void el.offsetWidth;el.classList.add('swapin')}
+function narrate(t,y){var n=$('narr');n.className='narr'+(y?' y':'');if(t===narrNow)return;narrNow=t;
+  n.innerHTML=t?t.split(' ').map(function(w,i){return '<span class="wd" style="--i:'+i+'">'+esc(w)+'</span>'}).join(' '):''}
+function typewrite(el,text,ms){if(reduce||!el)return;var i=0;el.textContent='';el.classList.add('typing');
+  (function f(){if(!el.isConnected)return;i++;el.textContent=text.slice(0,i);if(i<text.length)setTimeout(f,text.charAt(i-1)===' '?ms*2:ms);else setTimeout(function(){el.classList.remove('typing')},600)})()}
+// what the phone heard: only the new words fade in, so the line does not flicker while the browser revises it
+var Said=(function(){var el=$('said'),prev=[];
+  function set(t,quiet){var ws=(t||'').trim().split(/\s+/).filter(Boolean),keep=0;
+    while(keep<ws.length&&keep<prev.length&&ws[keep]===prev[keep])keep++;
+    el.classList.remove('ok');
+    while(el.childNodes.length>Math.max(0,keep*2-1))el.removeChild(el.lastChild);
+    for(var i=keep;i<ws.length;i++){if(i>0)el.appendChild(document.createTextNode(' '));var s=document.createElement('span');s.className='wd'+(quiet||reduce?'':' nw');s.style.setProperty('--i',i-keep);s.textContent=ws[i];el.appendChild(s)}
+    prev=ws}
+  return {set:set,ok:function(){if(prev.length)el.classList.add('ok')},clear:function(){prev=[];el.textContent='';el.classList.remove('ok')}};
+})();
+
+/* ================= rolling digits (after designbookmark "Word roll"): only the digits that change move ================= */
+function Roller(el,n){
+  var cols=[],cur=[],last=null,ZW='\u200b';el.textContent='';
+  for(var i=0;i<n;i++){var c=document.createElement('i');c.className='rc off';c.textContent=ZW;el.appendChild(c);cols.push(c);cur.push('')}
+  function set(str,still){
+    if(str===last)return;var first=last===null,dir=(!first&&parseFloat(str)<parseFloat(last))?'dn':'up';last=str;el.setAttribute('aria-label',str);
+    for(var i=0;i<n;i++){var ch=str.charAt(str.length-n+i)||'';if(ch===cur[i])continue;var c=cols[i],old=cur[i];cur[i]=ch;
+      c.className='rc '+dir+(ch?'':' off');
+      if(reduce||first||still){c.textContent=ch||ZW;continue}
+      c.innerHTML=(old?'<i class="ro" aria-hidden="true">'+old+'</i>':'')+(ch?'<i class="ri">'+ch+'</i>':ZW);
+      (function(c){setTimeout(function(){var o=c.querySelector('.ro');if(o)o.remove()},260)})(c)}
+  }
+  return {set:set,get value(){return last}};
+}
+
+/* ================= the DCS reading lifts to the middle of the stage while the control room checks it (after "Expand card"; big screens only) ================= */
+var liftY=Motion.S(0,Motion.pair('--spring-settle')),liftS=Motion.S(1,Motion.pair('--spring-settle')),lifted=false;
+animator([liftY,liftS],function(){var still=Math.abs(liftY.x)<.05&&Math.abs(liftS.x-1)<.001;$('dcs').style.transform=still?'':'translateY('+liftY.x.toFixed(2)+'px) scale('+liftS.x.toFixed(4)+')'});
+function liftDCS(on){lifted=on;var d=$('dcs'),y=0,s=1;
+  if(on&&!mobile()){var sub=$('sub'),fl=$('flow'),top=sub.offsetTop+sub.offsetHeight+18,bot=fl.offsetTop-14,free=bot-top,h=d.offsetHeight;
+    s=Math.min(1.7,free/h,($('stage').clientWidth-24)/d.offsetWidth);
+    if(s>=1.2)y=(top+free/2)-(d.offsetTop+h/2);else s=1}
+  Motion.to(liftY,y);Motion.to(liftS,s)}
+// the request travels along the line from the control room phone to the field phone
+function beam(){if(reduce)return;var b=$('beam'),w=$('flow').clientWidth-b.offsetWidth;
+  tween(900,EASE_IN_OUT,function(p){b.style.transform='translateX('+(w*p).toFixed(1)+'px)';b.style.opacity=p<.12?p/.12:p>.82?(1-p)/.18:1},function(){b.style.opacity=0})}
+
+/* ================= icons ================= */
+function valve(state){
+  var c=state==='done'?'#3ddc84':state==='now'?'#f2d533':'#5f6a6e';
+  var fill=(state==='done'||state==='now')?c:'none';
+  var dash=(state==='opt'||state==='optdone')?' stroke-dasharray="2 2"':'';
+  return '<svg class="vi" viewBox="0 0 30 24" fill="none"><path d="M3 3 L15 12 L3 21 Z M27 3 L15 12 L27 21 Z" fill="'+fill+'" stroke="'+c+'" stroke-width="1.8" stroke-linejoin="round"'+dash+'/></svg>';
+}
+var camSvg='<svg viewBox="0 0 14 12" fill="none" stroke="currentColor" stroke-width="1.1"><rect x="1" y="3" width="12" height="8" rx="1.5"/><circle cx="7" cy="7" r="2.3"/><path d="M4.5 3l1-2h3l1 2"/></svg>';
+var warnSvg='<svg width="11" height="10" viewBox="0 0 12 11" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M6 1l5 9H1z"/><path d="M6 4.5v2.5"/></svg>';
+var devSvg='<svg width="12" height="10" viewBox="0 0 13 11" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1" y="1" width="11" height="7" rx="1"/><path d="M4 10h5"/></svg>';
+var radioSvg='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="7" y="7" width="10" height="14" rx="2"/><path d="M10 7V3M10 11h4"/></svg>';
+var listSvg='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9aa5a9" stroke-width="2" stroke-linecap="round"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>';
+
+/* ================= state ================= */
+// 0 ready | 1 asking unit | 2 unit picked | 3 sent: valve | 4 stop P-1 | 5 reported | 6 closed | 7 handover
+var S;
+function fresh(){var s={stage:0,unit:null,t:{},photo:'todo',flow:119.5,hist:[],listening:false,view:S?S.view:'cr',ho:false,opened:false,busy:false};for(var i=0;i<25;i++)s.hist.push(119+Math.random()*1.6);return s}
+S=fresh();S.view='cr';
+function hhmm(d){d=d||new Date();return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)}
+function mmss(ms){var s=Math.max(0,Math.floor(ms/1000));return Math.floor(s/60)+':'+('0'+s%60).slice(-2)}
+function U(){return S.unit==='A'?'Unit A':'Unit B'}
+function tag(){return S.unit==='A'?'FI-201':'FI-101'}
+
+function copy(){
+  var u=U(),T=tag();
+  switch(S.stage){
+    case 0:return{e:'Ready',h:S.busy?'Heard “Stop P-1.”':'One tap. Then just talk.',s:S.busy?'OpsThread builds the request and checks the equipment list.':'The control room phone keeps listening.',n:'',cr:S.busy?'Spoke':'Your turn: speak',fd:'Nothing yet',turn:S.busy?'':'cr'};
+    case 1:return{e:'OpsThread asks',h:'2 P-1s on the list.<br><span class="y">Which unit?</span>',s:'Only what is missing. Answer by voice.',n:'OpsThread asks: “Unit A or Unit B?”',ny:1,cr:'Your turn: say it',fd:'Nothing yet',turn:'cr'};
+    case 2:return{e:'Control room checks',h:u+'.<br><span class="g">Checked against the list.</span>',s:'Say “send”, or slide. Only the control room sends it.',n:'The control room said “'+u+'”.',cr:'Your turn: send',fd:'Nothing yet',turn:'cr'};
+    case 3:return{e:'Sent to the field',h:'Sent.<br><span class="g">Same thread on both phones.</span>',s:S.opened?'Hold DONE when the valve is closed. A tap is not enough.':'Sent '+((S.t.sent-S.t.card)/1000).toFixed(1)+' s after the card. It lands on the field phone.',n:'The control room said send.',cr:'Waiting',fd:S.opened?'Your turn: Close valve':'Your turn: open it',turn:'fd'};
+    case 4:return{e:'The field works step by step',h:'<span class="g">Close the P-1 discharge valve ✓</span>',s:'Step 1 of 2 done. Next: Stop P-1.',n:'The field finished “Close the P-1 discharge valve”.',cr:'Waiting',fd:'Your turn: Stop P-1',turn:'fd'};
+    case 5:return{e:'Field reports',h:'Field taps Done:<br><span class="y">reported, not closed.</span>',s:'The control room checks '+T+' on its own DCS screen.',n:'The field held Done. Reported, not closed.',ny:1,cr:'Your turn: check',fd:'Reported',turn:'cr'};
+    case 6:return{e:'Closed by the control room',h:'<span class="g">'+T+' reads 0. Closed.</span>',s:'Said after its own DCS check.',n:'The control room closed it on “'+T+' reads 0”.',cr:'Closed',fd:'Closed',turn:''};
+    case 7:return{e:'Shift change',h:'Anything still open<br><span class="y">tops the next shift’s handover.</span>',s:'Closed requests move below.',n:'Handover: 1 open, 1 standing, 1 closed.',ny:1,cr:'Handing over',fd:'Closed',turn:'cr'};
+  }
+}
+
+/* ================= segmented controls ================= */
+var segView=Segmented($('segView'),[{k:'cr',label:'Control room'},{k:'fd',label:'Field'}],function(k){setView(k)},true);
+var segCR=Segmented($('segCR'),[{k:'req',label:'Requests'},{k:'ho',label:'Handover'}],function(k){S.ho=(k==='ho');if(!S.ho&&S.stage===7)S.stage=6;render()});
+
+/* ================= step progress ================= */
+var NODES=['Pick unit','Send','Close valve','Stop P-1','Close on<br>reading'];
+$('nodes').innerHTML=NODES.map(function(n){return '<div class="node"><span class="vw"></span><span class="nl">'+n+'</span></div>'}).join('');
+var nodeEls=[].slice.call(document.querySelectorAll('.node')),nodeScale=nodeEls.map(function(){return Motion.S(1,Motion.pair('--spring-pop'))}),barS=Motion.S(0,Motion.pair('--spring-settle')),prevNode=[];
+animator([barS].concat(nodeScale),function(){$('flowBar').style.transform='scaleX('+Math.max(0,barS.x)+')';nodeEls.forEach(function(n,i){n.firstChild.style.transform='scale('+nodeScale[i].x+')'})});
+function nodeState(i){var st=S.stage,cur={0:-1,1:0,2:1,3:2,4:3,5:4,6:99,7:99}[st];
+  if(cur===99||i<cur)return 'done';if(i===cur)return 'now';return 'todo'}
+function renderStage(){
+  var c=copy();
+  setText($('eyebrow'),c.e);setHead(c.h);setText($('sub'),c.s);
+  narrate(c.n,c.ny);
+  $('rlCR').querySelector('span').textContent=c.cr;$('rlFD').querySelector('span').textContent=c.fd;
+  $('rlCR').classList.toggle('turn',c.turn==='cr');$('rlFD').classList.toggle('turn',c.turn==='fd');
+  $('crPhone').classList.toggle('turn',c.turn==='cr');$('fdPhone').classList.toggle('turn',c.turn==='fd');
+  segView.status('cr',c.cr,c.turn==='cr');segView.status('fd',c.fd,c.turn==='fd');
+  nodeEls.forEach(function(el,i){var s=nodeState(i);if(prevNode[i]!==s){el.querySelector('.vw').innerHTML=valve(s);el.className='node '+(s==='now'?'now':s==='done'?'ok':'');if(prevNode[i]!==undefined&&(s==='now'||s==='done')){nodeScale[i].x=.6;Motion.to(nodeScale[i],1)}prevNode[i]=s}});
+  Motion.to(barS,{0:0,1:.08,2:.29,3:.51,4:.73,5:.94,6:1,7:1}[S.stage]);
+  $('dcs').classList.toggle('hot',S.stage===5);
+  $('dcs').classList.toggle('cl',S.stage===6);
+  liftDCS(S.stage===5||S.stage===6);
+  document.body.classList.toggle('dcsOn',S.stage===5||S.stage===6);
+  $('dcsTag').textContent=tag();$('dcsDesc').textContent=U()+' P-1 discharge flow';
+}
+
+/* ================= control room phone ================= */
+var STEPS=['Pick the unit','Send to field','Close the P-1 discharge valve','Stop P-1','Close on FI-101 reads 0'];
+function crStepState(i){var st=S.stage;var cur={0:-1,1:0,2:1,3:2,4:3,5:4,6:99,7:99}[st];if(st===0)return 'todo';if(cur===99||i<cur)return 'done';if(i===cur)return 'now';return 'todo'}
+var crActFor=-1,slider=null,closer=null;
+function renderCR(){
+  var st=S.stage,card=$('crCard'),T=tag();
+  if(st===0){card.className='card';card.innerHTML=S.busy?'<div class="top"><div class="verb">STOP</div><div class="eq">P-1<small>PUMP</small></div></div><div class="unit">Unit <span class="q">…</span></div>':'<div class="skel" style="width:40%;height:18px"></div><div class="skel" style="width:22%;margin-left:auto;margin-top:-28px;height:16px"></div><div class="unit" style="margin-top:22px">Unit <div class="skel" style="width:60px;margin:0"></div></div>'}
+  else{card.className='card'+(st===1||st===2?' act':'')+(st>=3?' dim':'');
+    card.innerHTML='<div class="top"><div class="verb">STOP</div><div class="eq">P-1<small>PUMP</small></div></div><div class="unit">Unit '+(S.unit?'<span class="v">'+U()+'</span>':'<span class="q">?</span>')+'</div>'}
+  var box=$('crSteps');
+  if(st===0&&S.busy){/* task list owns the box */}
+  else if(st===0){box.className='steps';box.innerHTML='<div class="skel" style="width:70%;margin:18px 10px"></div><div class="skel" style="width:55%;margin:18px 10px"></div><div class="skel" style="width:65%;margin:18px 10px"></div><div class="skel" style="width:50%;margin:18px 10px"></div>'}
+  else{var sh='';
+    STEPS.forEach(function(name,i){var s=crStepState(i),cls='st'+(s==='now'?' now':s==='done'?' ok':''),meta='';
+      if(i===4)name='Close on '+T+' reads 0';
+      if(i===2||i===3){meta=s==='done'?'✓ '+warnSvg:s==='now'?warnSvg+' <span data-timer="'+(i===2?'sent':'valve')+'">0:00</span>':warnSvg}
+      if(i<2&&s==='done')meta='✓';
+      if(s==='now'&&(i===0||i===1||i===4))meta='Now';
+      if(i===4&&st>=6)meta='✓';
+      sh+='<div class="'+cls+'">'+valve(s)+'<span class="tx">'+(i+1)+' '+name+'</span><span class="meta">'+meta+'</span></div>';
+      if(i===0&&st===1)sh+='<div class="ask"><div class="q">OpsThread asks: <b>Unit A or Unit B?</b></div><div class="opts"><button data-unit="A" id="uA">Unit A</button><button data-unit="B" id="uB">Unit B</button></div><div class="h">2 P-1s on the list</div><div class="h2">Say “Unit A” or “Unit B”, or tap.</div></div>'});
+    box.innerHTML=sh;box.className='steps box';
+    if(st===1&&!S.asked){S.asked=true;typewrite(box.querySelector('.ask .q b'),'Unit A or Unit B?',30)}}
+  // action area: rebuild only when the stage changes
+  var hint=$('crHint');
+  if(crActFor!==st){crActFor=st;var a=$('crAct');slider=null;closer=null;
+    if(st<=1){a.innerHTML='<button class="bigbtn" disabled>Send to field</button>'}
+    else if(st===2){slider=SlideToConfirm(a,{label:'Slide to send to the field',busyLabel:'Sending to the field',doneLabel:'Sent',onConfirm:function(){beam();return new Promise(function(r){setTimeout(r,reduce?0:650)})},onDone:function(){setTimeout(function(){go(3)},350)}})}
+    else if(st===3||st===4){a.innerHTML='<button class="bigbtn out" disabled>Sent. The field is on it.</button>'}
+    else if(st===5){closer=HoldToPublish(a,{label:'Hold to close: '+T+' reads 0',holdingLabel:'Keep holding to close',doneLabel:'Closed',onComplete:function(){go(6)},onBlocked:function(){var m=T+' still reads '+S.flow.toFixed(1)+'. Close it on 0.';$('miss').textContent=m;toast(m)}});closer.setDisabled(S.flow>.5,'Wait for '+T+' to read 0')}
+    else if(st===6){a.innerHTML='<button class="bigbtn ghost" id="toHO">Shift change: see the handover</button>'}
+    else if(st===7){a.innerHTML='<button class="bigbtn go" id="again">Run the demo again</button>'}
+  }
+  hint.textContent={0:'',1:'',2:'Say “send”, or slide.',3:'',4:'',5:'Say “'+T+' reads 0, close”, or hold.',6:'Closed. Nothing left for this request.',7:''}[st];
+  $('tip').textContent={0:'Try: “Stop P-1.”',1:'Try: “Unit B.”',2:'Try: “Send.”',3:'The field is working now.',4:'The field is working now.',5:'Try: “'+T+' reads 0, close.”'}[st]||'';
+  $('crDock').hidden=(st>=6);
+  segCR.set(S.ho?'ho':'req');
+  $('crMain').hidden=S.ho;$('hoView').hidden=!S.ho;
+  if(S.ho)renderHO();
+}
+function renderHO(){
+  var st=S.stage;
+  var cur=(st>=3&&st<6)?'<div class="it">'+valve('now')+'<div>R-02 '+U()+' · P-1 · Stop</div></div><div class="sm">'+(st===5?'Reported '+hhmm(new Date(S.t.reported))+', reading not checked':'Sent '+hhmm(new Date(S.t.sent))+', field working')+'</div>':'';
+  var closed=st>=6?'<div class="it">'+valve('done')+'<div>R-02 '+U()+' · P-1 · Stop</div></div><div class="sm">Closed '+hhmm(new Date(S.t.closed))+'. '+tag()+' reads 0, confirmed</div>':'<div class="sm" style="margin-left:0">None yet</div>';
+  $('hoView').innerHTML='<h3>Handover<small>to the next shift</small></h3>'+
+   '<div class="hob open"><div class="k">Open, needs confirmation</div>'+cur+'<div class="it">'+valve('now')+'<div>R-01 Unit A · P-1 · Start</div></div><div class="sm">Reported 21:43, reading not checked</div></div>'+
+   '<div class="hob"><div class="k">Standing orders</div><div class="it"><span style="width:18px;text-align:center">•</span><div>SO-01 Keep P-1 running during the rate change (sample)</div></div><div class="sm">Unit A</div></div>'+
+   '<div class="hob cl"><div class="k">Closed this shift</div>'+closed+'</div>'+
+   '<button class="bigbtn ghost" id="hoBack" style="margin-top:12px">Back to requests</button>'+(st===7?'<button class="bigbtn go" id="again2" style="margin-top:8px">Run the demo again</button>':'');
+}
+
+/* ================= field phone ================= */
+var fdTopFor=null,fdActFor=null,stack=null,openRoll=null;
+function renderFD(){
+  var st=S.stage,top=$('fdTop'),act=$('fdAct'),T=tag();
+  var mode=st<3?'empty':!S.opened?'notif':'req';
+  if(mode!=='req'){
+    if(fdTopFor!=='stack'){fdTopFor='stack';top.innerHTML='<div class="empty"><b id="openN">0</b><em>open</em><span>No requests for you</span></div><div id="nsHost"></div>';openRoll=Roller($('openN'),1);openRoll.set('0');
+      stack=NotificationStack($('nsHost'),[
+        {id:'so1',app:'Standing order',time:'Shift start',title:'SO-01 Keep P-1 running',body:'Unit A, during the rate change (sample).',icon:listSvg},
+        {id:'r01',app:'Handover',time:'21:43',title:'R-01 Unit A · P-1 · Start',body:'Reported by the last shift. Reading not checked yet.',icon:listSvg}],{hint:'Tap to fan out. Swipe a card away.'})}
+    if(mode==='notif'&&!S.pushed&&(!mobile()||S.view==='fd')){S.pushed=true;openRoll.set('1');top.querySelector('.empty span').textContent='1 new request';
+      stack.push({id:'r02',isNew:true,app:'Control room',time:'now',title:'STOP P-1 · '+U().toUpperCase(),body:'Close the P-1 discharge valve, then stop P-1. Tap to open.',icon:radioSvg,onOpen:function(){openReq()}});
+      top.querySelector('.ns-hint').textContent='Tap the new request to open it.'}
+    act.innerHTML='';fdActFor=null;
+  } else {
+    fdTopFor='req';var dim=st>=5,h='<div class="freq'+(dim?' dim':'')+'"><div class="from">From the control room, '+hhmm(new Date(S.t.sent))+'</div><div class="u">'+U().toUpperCase()+'</div><div class="a">STOP <span>P-1</span><small>PUMP</small></div><div class="chk">Check the tag: '+U().toUpperCase()+' · P-1</div></div><div class="steps box">';
+    STEPS.forEach(function(name,i){var s,meta='',cls='st';if(i===4)name='Close on '+T+' reads 0';
+      if(i<2){s='done';meta='✓ '+devSvg}
+      else if(i===2){s=st===3?'now':'done';meta=st===3?'Now':'✓'}
+      else if(i===3){s=st===4?'now':st>4?'done':'todo';meta=st===4?'Now':st>4?'✓':''}
+      else{s=st>=6?'done':st===5?'now':'todo';meta=st>=6?'✓ '+devSvg:devSvg}
+      if(s==='now')cls+=' now';else if(s==='done')cls+=' ok';
+      h+='<div class="'+cls+'">'+valve(s)+'<span class="tx">'+(i+1)+' '+name+'</span><span class="meta">'+meta+'</span></div>'});
+    top.innerHTML=h+'</div>';
+    if(fdActFor!==st){fdActFor=st;
+      if(st===3)HoldButton(act,{title:'DONE',label:'Hold when the valve is closed',holdingLabel:'Keep holding',completeLabel:'Valve closed',tapHint:'Hold DONE for a moment. A tap is not enough.',onComplete:function(){go(4)}});
+      else if(st===4)HoldButton(act,{title:'DONE',label:'Hold when P-1 is stopped',holdingLabel:'Keep holding',completeLabel:'P-1 stopped',tapHint:'Hold DONE for a moment. A tap is not enough.',afterMs:250,onComplete:function(){LoadingSuccess(act,{loading:'Sending the report',done:'Reported',ms:800,onDone:function(){go(5)}})}});
+      else if(st===5)act.innerHTML='<div class="chip"><div class="lab"><b>REPORTED</b><span data-timer="reported">0:00</span></div><p><span class="shim">Waiting for the control room to check '+T+'.</span></p></div>';
+      else act.innerHTML='<div class="chip cl"><div class="lab"><b>✓ CLOSED</b><span>'+hhmm(new Date(S.t.closed))+'</span></div><p>The control room confirmed '+T+' reads 0.</p></div>';
+    }
+  }
+}
+function openReq(){if(S.stage!==3||S.opened)return;S.opened=true;render()}
+
+/* ================= view switching (mobile) ================= */
+function setView(v,why){S.view=v;segView.set(v);
+  $('crPhone').classList.toggle('mhide',v!=='cr');$('fdPhone').classList.toggle('mhide',v!=='fd');
+  if(v==='fd')renderFD();
+  requestAnimationFrame(function(){segCR.relayout();if(stack)stack.relayout()});
+  if(why&&mobile())toast(why);if(mobile())window.scrollTo({top:0,behavior:'smooth'})}
+
+function render(){renderStage();renderCR();renderFD();tick()}
+function go(stage){
+  S.stage=stage;var now=Date.now();
+  if(stage===1)S.t.card=now;if(stage===3)S.t.sent=now;if(stage===4)S.t.valve=now;if(stage===5)S.t.reported=now;if(stage===6)S.t.closed=now;if(stage===7)S.ho=true;
+  Said.clear();$('miss').textContent='';
+  render();
+  var c=copy();
+  if(mobile()&&c.turn&&c.turn!==S.view)setTimeout(function(){setView(c.turn,c.turn==='fd'?'Field’s turn: a request just landed.':'Control room’s turn.')},700);
+}
+function heardStop(){if(S.stage!==0||S.busy)return;S.busy=true;render();
+  TaskList($('crSteps'),'OpsThread is building the request',[{label:'Heard “Stop P-1.”',ms:300},{label:'Action: Stop',ms:260},{label:'Equipment: P-1 (pump)',ms:300},{label:'Checked the equipment list',sub:'2 matches: Unit A and Unit B. Ask which.',ms:520}],function(){S.busy=false;go(1)});
+  $('crSteps').className='steps box';
+}
+function pickUnit(u){if(S.stage!==1)return;S.unit=u;go(2)}
+function send(){if(S.stage!==2||!slider)return;slider.confirm()}
+function closeReq(){if(S.stage!==5)return false;if(S.flow>.5){var m=tag()+' still reads '+S.flow.toFixed(1)+'. Close it on 0.';$('miss').textContent=m;toast(m);return false}if(closer)closer.complete();return true}
+function reset(){stopListen();var v=S.view;S=fresh();S.view=mobile()?'cr':v;crActFor=-1;fdTopFor=null;fdActFor=null;prevNode=[];render();setView(S.view)}
+
+/* ================= understanding speech / typing =================
+   Only the words this step expects are accepted (the demo knows what comes next), and common
+   mishearings are mapped back: "stop pee won", "unit bee/v/d", "sand", "clothes"... */
+function norm(t){return ' '+t.toLowerCase().replace(/[“”"'.,!?:;]/g,' ').replace(/-/g,' ').replace(/(\d)/g,' $1 ').replace(/\s+/g,' ').trim()+' '}
+var W={
+  stop:/ (stop|stops|stopped|stopping|stap|stob|top|stuff|stomp|shop|start p) /,
+  p1:/ (p ?1|p one|pee ?(1|one|won)|pea ?(1|one|won)|pe ?(1|one)|pete ?(1|one)|key ?(1|one)|tea ?(1|one)|be ?(1|one)|people|pay ?(1|one)|pin|pee|p) /,
+  unitWord:/ (unit|units|you need|you knit|unite|you nit|unity|you ate|human|eunice|in it) /,
+  b:/ (b|bee|be|beat|bea|bean|beam|bead|v|vee|d|dee|e|bravo|the|me|we) /,
+  a:/ (a|ay|aye|eh|hey|8|eight|alpha|ate|age|ace) /,
+  bAlone:/^ (b|bee|be|bravo|v|vee) $/, aAlone:/^ (a|ay|eh|hey|8|eight|alpha) $/,
+  send:/ (send|sends|sent|sending|sand|sen|cent|scent|send it|sent it|go ahead|ok send|okay send|yes send) /,
+  close:/ (zero|0|0 0|reads o|reads oh|close|closed|closing|clothes|clause|reads 0|reads zero|flows zero|flow zero|no flow) /
+};
+function intent(t){
+  if(S.stage===0&&!S.busy){if(W.stop.test(t)&&(W.p1.test(t)||/ (1|one|won) /.test(t)))return 'stop';if(/^ (stop|stop it|stop the pump|stop pump 1|stop pump one) $/.test(t))return 'stop';return null}
+  if(S.stage===1){
+    var m=t.match(/ (unit|units|you need|you knit|unite|you nit|unity|human|eunice|in it) (\S+) /);
+    if(m){var w=' '+m[2]+' ';if(W.b.test(w))return 'B';if(W.a.test(w))return 'A'}
+    if(W.bAlone.test(t)||/ bravo /.test(t)||/ unit ?b /.test(t))return 'B';
+    if(W.aAlone.test(t)||/ alpha /.test(t)||/ unit ?a /.test(t))return 'A';
+    if(/ (unity|unit be|unit bee) /.test(t))return 'B';
+    return null}
+  if(S.stage===2)return W.send.test(t)?'send':null;
+  if(S.stage===5)return W.close.test(t)?'close':null;
+  return null;
+}
+function act(k){if(k==='stop')heardStop();else if(k==='A'||k==='B')pickUnit(k);else if(k==='send')send();else if(k==='close')closeReq()}
+// interim: act early only when the step would succeed; final: act, or explain why nothing changed
+function understand(raw,interim){
+  var k=intent(norm(raw));
+  if(k&&interim&&k==='close'&&S.flow>.5)k=null;
+  if(k){act(k);$('miss').textContent=k==='close'&&S.flow>.5?$('miss').textContent:'';return true}
+  if(!interim)$('miss').textContent=(S.stage===3||S.stage===4)?'Heard “'+raw.trim()+'”. The field is working now; nothing changed.':'Heard “'+raw.trim()+'”. '+({0:'Say “Stop P-1.”',1:'Say “Unit B” or “Unit A.”',2:'Say “Send.”',5:'Say “'+tag()+' reads zero, close.”'}[S.stage]||'Nothing changed.');
+  return false;
+}
+
+/* ================= voice ================= */
+var SR=window.SpeechRecognition||window.webkitSpeechRecognition,rec=null,want=false,levelT=null,handled={},sess=0;
+var PHRASES=['Stop P-1','P-1','Unit A','Unit B','Send','FI-101 reads zero, close','close'];
+function startListen(){
+  if(!SR){toast('Voice is not available in this browser. Type it, or use the buttons.');$('typ').focus();return}
+  want=true;S.listening=true;showDock();
+  try{rec=new SR();rec.lang='en-US';rec.continuous=true;rec.interimResults=true;rec.maxAlternatives=5;
+    // bias toward the words this demo uses, where the browser supports it
+    try{if(window.SpeechRecognitionPhrase&&'phrases' in rec)rec.phrases=PHRASES.map(function(p){return new SpeechRecognitionPhrase(p,5)})}catch(_){}
+    try{var G=window.SpeechGrammarList||window.webkitSpeechGrammarList;if(G){var g=new G();g.addFromString('#JSGF V1.0; grammar ops; public <c> = stop p one | unit a | unit b | send | zero | close ;',1);rec.grammars=g}}catch(_){}
+    sess++;handled={};
+    rec.onresult=function(e){heardSound(1);for(var i=e.resultIndex;i<e.results.length;i++){var r=e.results[i],key=sess+':'+i,txt=r[0].transcript;
+      Said.set(txt);
+      if(handled[key]){Said.ok();continue}
+      var done=false;for(var k=0;k<r.length&&!done;k++)done=understand(r[k].transcript,!r.isFinal);
+      if(done){handled[key]=true;Said.set(txt,true);Said.ok()}
+      else if(r.isFinal)understand(txt,false)}};
+    rec.onspeechstart=function(){heardSound(.8)};rec.onsoundstart=function(){heardSound(.5)};
+    rec.onerror=function(e){if(e.error==='not-allowed'||e.error==='service-not-allowed'){want=false;stopListen();toast('Microphone blocked. Type it, or use the buttons.')}else if(e.error==='network'||e.error==='audio-capture'){want=false;stopListen();toast(e.error==='network'?'Voice lost the network. Type it, or use the buttons.':'No microphone found. Type it, or use the buttons.')}};
+    rec.onend=function(){if(want&&S.listening){sess++;handled={};setTimeout(function(){if(want)try{rec.start()}catch(_){}},120)}else{S.listening=false;showDock()}};
+    rec.start();
+  }catch(err){want=false;S.listening=false;showDock();toast('Voice could not start. Type it, or use the buttons.')}
+}
+function stopListen(){want=false;S.listening=false;if(rec){try{rec.stop()}catch(_){}}showDock()}
+// voice bars: a waveform that scrolls to the left. It rests while nobody speaks and jumps each time the browser reports sound or words.
+var BARS=27,lv=[],energy=0,lvlBars;
+function heardSound(x){energy=Math.max(energy,x)}
+function levelStep(){energy*=.8;
+  lv.push(reduce?.3:Math.min(1,.13+.05*Math.sin(Date.now()/380)+energy*(.3+.7*Math.random())));if(lv.length>BARS)lv.shift();
+  for(var i=0;i<BARS;i++){var v=lv[lv.length-BARS+i];lvlBars[i].style.transform='scaleY('+(v===undefined?.13:v).toFixed(3)+')'}}
+function showDock(){$('dockIdle').hidden=S.listening;$('dockOn').hidden=!S.listening;
+  if(S.listening&&!levelT){lv=[];energy=0;levelT=setInterval(levelStep,reduce?500:70)}
+  if(!S.listening&&levelT){clearInterval(levelT);levelT=null}}
+$('lvl').innerHTML=new Array(BARS+1).join('<i></i>');lvlBars=$('lvl').children;
+
+/* ================= process value ================= */
+var dcsRoll=Roller($('dcsVal'),5),wasZero=false;dcsRoll.set(S.flow.toFixed(1));
+function stepFlow(){
+  if(S.stage>=5){S.flow=S.flow>1?S.flow*.4:0}else S.flow=119.6+(Math.random()-.5)*1.8;
+  S.hist.push(S.flow);if(S.hist.length>25)S.hist.shift();
+  var v=$('dcsVal'),z=S.flow<.05,was=parseFloat(dcsRoll.value);dcsRoll.set(S.flow.toFixed(1),S.stage<5&&Math.abs(S.flow-was)<3);v.classList.toggle('zero',z);
+  if(z!==wasZero){wasZero=z;$('dcs').classList.toggle('zeroed',z)}
+  // the trend line scrolls one sample to the left between readings instead of jumping
+  var l=$('sparkL');l.style.transition='none';l.style.transform='translateX(0)';
+  l.setAttribute('points',S.hist.map(function(y,i){return (i*4)+','+(30-y/125*24).toFixed(1)}).join(' '));l.setAttribute('stroke',z?'#3ddc84':'#f2d533');
+  if(!reduce){l.getBoundingClientRect();l.style.transition='transform .7s linear';l.style.transform='translateX(-4px)'}
+  if(S.stage===5&&closer)closer.setDisabled(S.flow>.5,'Wait for '+tag()+' to read 0');
+}
+function tick(){var now=Date.now();
+  [].forEach.call(document.querySelectorAll('[data-timer]'),function(el){var k=el.getAttribute('data-timer');if(S.t[k])el.textContent=mmss(now-S.t[k])});
+  var c=hhmm();[].forEach.call(document.querySelectorAll('.clock'),function(el){el.textContent=c})}
+setInterval(stepFlow,700);setInterval(tick,500);
+
+var tT;function toast(m){var t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(function(){t.classList.remove('on')},1900)}
+
+/* ================= events ================= */
+document.addEventListener('click',function(e){
+  var b=e.target.closest('button');if(!b)return;
+  if(b.dataset.unit){pickUnit(b.dataset.unit);return}
+  switch(b.id){
+    case 'micBtn':startListen();break;
+    case 'stopBtn':stopListen();break;
+    case 'toHO':go(7);break;
+    case 'again':case 'again2':reset();break;
+    case 'camBtn':if(S.photo!=='done'){S.photo='done';render();toast('Tag photo is optional. Skipped in this demo.')}break;
+    case 'hoBack':S.ho=false;if(S.stage===7)S.stage=6;render();break;
+  }
+});
+$('typForm').addEventListener('submit',function(e){e.preventDefault();var v=$('typ').value.trim();if(!v)return;Said.set(v,true);if(understand(v))$('typ').value=''});
+window.addEventListener('resize',function(){segView.relayout();segCR.relayout();renderFD();if(stack)stack.relayout();if(lifted)liftDCS(true)});
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){segView.relayout();segCR.relayout();if(stack)stack.relayout()});
+
+render();setView('cr');
+window.__ops={get stage(){return S.stage},get flow(){return S.flow},say:function(t){return understand(t)}};
+})();
+</script>
+</body>
+</html>
