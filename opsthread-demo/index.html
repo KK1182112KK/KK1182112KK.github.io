@@ -64,12 +64,12 @@ input{font:inherit;color:inherit}
 .node.now{color:var(--yellow)}.node.ok{color:var(--fg)}
 .narr{margin-top:22px;font-size:16px;min-height:22px}
 .narr.y{color:var(--yellow)}
-.dcs{margin:22px auto 0;width:300px;border:1px dashed var(--line2);border-radius:6px;padding:12px 14px;text-align:left;transition:border-color .3s}
+.dcs{position:relative;z-index:2;margin:22px auto 0;width:300px;border:1px dashed var(--line2);border-radius:6px;padding:12px 14px;text-align:left;transition:border-color .3s}
 .dcs.hot{border:2px solid var(--fg)}
 .dcs .t{font-size:12px;font-weight:600}.dcs .t i{font-style:normal;font-weight:400;color:var(--muted)}
 .dcs .tag{font-family:var(--fm);font-size:12px;color:var(--muted);margin-top:2px}.dcs .tag b{color:var(--fg);font-weight:500;margin-right:6px}
 .dcs .row{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-top:6px}
-.dcs .val{font-family:var(--fm);font-size:34px;color:var(--yellow);letter-spacing:1px}
+.dcs .val{display:inline-block;font-family:var(--fm);font-size:34px;color:var(--yellow);transform-origin:0 80%;transition:color .3s}
 .dcs .val.zero{color:var(--green)}
 .dcs .u{font-size:13px;color:var(--muted);margin-left:6px}
 .dcs svg{width:96px;height:36px}
@@ -140,11 +140,14 @@ input{font:inherit;color:inherit}
 .dock input{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line2);border-radius:6px;padding:7px 9px;font-size:16px;text-align:center}
 .dock input::placeholder{color:var(--dim);font-size:13px}
 .dock .go{padding:0 10px;border-radius:6px;background:var(--panel2);border:1px solid var(--line2);font-size:13px}
-.mic{width:52px;height:52px;border-radius:50%;border:2px solid var(--green);background:var(--green-bg);display:grid;place-items:center;margin:10px auto 2px}
+.mic{position:relative;width:52px;height:52px;border-radius:50%;border:2px solid var(--green);background:var(--green-bg);display:grid;place-items:center;margin:10px auto 2px}
+.mic::after{content:"";position:absolute;inset:-2px;border-radius:50%;border:2px solid var(--green);opacity:0;pointer-events:none;animation:micRing 2.4s var(--ease-out) infinite}
+@keyframes micRing{0%{opacity:.65;transform:scale(1)}70%,100%{opacity:0;transform:scale(1.5)}}
 .mic svg{width:22px;height:22px}
 .said{font-size:19px;font-weight:600;text-decoration:underline;text-decoration-color:var(--green);text-underline-offset:4px;min-height:26px;margin-top:2px;word-break:break-word}
-.lvl{display:flex;gap:3px;justify-content:center;margin:6px 0 8px;height:16px;align-items:center}
-.lvl i{width:3px;height:4px;background:var(--green);border-radius:1px;transition:height .1s}
+/* voice bars (Kokonut UI "Voice input": a scrolling waveform; here it moves when the browser reports speech) */
+.lvl{display:flex;gap:3px;justify-content:center;margin:6px 0 8px;height:22px;align-items:center}
+.lvl i{width:3px;height:22px;background:var(--green);border-radius:2px;transform:scaleY(.14);transition:transform .08s linear}
 .listen{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--green);border:1px solid var(--green);border-radius:99px;padding:6px 14px;background:var(--green-bg)}
 .listen::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 1.2s infinite}
 @keyframes blink{50%{opacity:.25}}
@@ -182,6 +185,7 @@ input{font:inherit;color:inherit}
 .hold .in{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;pointer-events:none}
 .hold b{font-family:var(--fc);font-size:28px;font-weight:700;letter-spacing:1px;line-height:1;display:flex;align-items:center;gap:8px}
 .hold span{font-size:12px;font-weight:500}
+.hold .sub{margin-top:2px;min-height:0}
 .hold .lbl{transition:opacity .2s var(--ease-out),transform .2s var(--ease-out),filter .2s var(--ease-out)}
 .hold .lbl.swap{opacity:0;transform:translateY(-6px);filter:blur(2px)}
 .hold svg.ck{width:22px;height:22px}
@@ -259,6 +263,58 @@ input{font:inherit;color:inherit}
 .toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,20px);opacity:0;background:var(--panel2);border:1px solid var(--line2);color:var(--fg);padding:9px 16px;border-radius:99px;font-size:13px;transition:.25s;pointer-events:none;z-index:20;max-width:90vw;text-align:center}
 .toast.on{opacity:1;transform:translate(-50%,0)}
 
+/* ---------- motion added 2026-11-18, rebuilt in plain CSS/JS after designbookmark.com/motion:
+   Streaming reply + Typewriter (words arrive one by one), Marker text, Thinking text, Word roll, Expand card ---------- */
+.wd{display:inline-block}
+@keyframes wIn{from{opacity:0;transform:translateY(.28em);filter:blur(6px)}}
+@keyframes sIn{from{opacity:0;filter:blur(5px)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(4px)}}
+.headline .wd{animation:wIn .5s var(--ease-out) backwards;animation-delay:calc(var(--i)*38ms)}
+.narr .wd{animation:wIn .4s var(--ease-out) backwards;animation-delay:calc(var(--i)*45ms + 120ms)}
+.swapin{animation:fadeUp .35s var(--ease-out) backwards}
+/* marker: a highlighter stroke drawn under the key phrase once its words have landed */
+.headline .mk{background-image:linear-gradient(var(--mk),var(--mk));background-repeat:no-repeat;background-position:0 90%;background-size:0% 30%;animation:mkIn .6s var(--ease-out) forwards;animation-delay:calc(var(--n)*38ms + 260ms)}
+.headline .y.mk{--mk:rgba(242,213,51,.24)}.headline .g.mk{--mk:rgba(61,220,132,.24)}
+@keyframes mkIn{to{background-size:100% 30%}}
+/* what the phone heard */
+.said .wd{display:inline}
+.said .wd.nw{animation:sIn .34s var(--ease-out) backwards;animation-delay:calc(var(--i)*45ms)}
+.said{transition:color .2s}
+.said.ok{color:var(--green)}
+.said.ok::after{content:"";display:inline-block;width:.6em;height:.32em;margin-left:.45em;border-left:2.5px solid var(--green);border-bottom:2.5px solid var(--green);transform:translateY(-.22em) rotate(-45deg);animation:okIn .4s var(--ease-out) backwards}
+@keyframes okIn{from{opacity:0;transform:translateY(-.22em) rotate(-45deg) scale(.3)}}
+/* typewriter caret */
+.typing::after{content:"";display:inline-block;width:2px;height:.95em;margin-left:2px;vertical-align:-.12em;background:currentColor;animation:blink 1s steps(1) infinite}
+/* thinking text: a soft light runs through words that are waiting on something */
+.shim{--sa:currentColor;--sb:#fff;background:linear-gradient(90deg,var(--sa) 0%,var(--sa) 36%,var(--sb) 50%,var(--sa) 64%,var(--sa) 100%);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:shine 2.4s linear infinite}
+.tl .hd .shim{--sa:#aab4b3;--sb:#fff}.chip .shim{--sa:#b9b38d;--sb:#fffbe0}.htp .shim{--sa:#5f6a6e;--sb:#d3dad8}
+/* rolling digits */
+.rc,.rc i{font-style:normal}
+.rc{display:inline-block;position:relative;width:calc(1ch + 1px);text-align:center;transition:width .28s var(--ease-out)}
+.rc.off{width:0}
+.rc.dn{--d:.5em}.rc.up{--d:-.5em}
+.rc .ro{position:absolute;left:0;right:0;top:0;animation:rOut .22s ease-in forwards}
+.rc .ri{display:inline-block;animation:rIn .3s var(--ease-out) backwards}
+@keyframes rOut{to{opacity:0;transform:translateY(var(--d));filter:blur(2px)}}
+@keyframes rIn{from{opacity:0;transform:translateY(calc(var(--d)*-1));filter:blur(2px)}}
+.dcs .val.zero{animation:valPop .55s var(--ease-out)}
+@keyframes valPop{0%{transform:scale(1)}35%{transform:scale(1.14)}100%{transform:scale(1)}}
+.dcs.cl{border:2px solid var(--green)}
+.dcs.zeroed{animation:zeroRing .9s var(--ease-out)}
+@keyframes zeroRing{0%{box-shadow:0 0 0 0 rgba(61,220,132,.55)}100%{box-shadow:0 0 0 18px rgba(61,220,132,0)}}
+/* the request travelling from the control room to the field */
+.flow .beam{position:absolute;left:0;top:7px;width:72px;height:11px;border-radius:11px;background:linear-gradient(90deg,rgba(61,220,132,0),rgba(61,220,132,.95));box-shadow:0 0 14px rgba(61,220,132,.5);opacity:0;pointer-events:none}
+/* logo (Ops + valve T + hread, Geist 400) */
+.roles{position:relative}
+.brand{position:absolute;left:50%;top:8px;transform:translateX(-50%);display:flex;flex-direction:row;align-items:baseline;font-family:'Geist',Arial,sans-serif;font-size:22px;font-weight:400;line-height:1;letter-spacing:-.9px;color:var(--fg);white-space:nowrap}
+.brand svg{width:21.4px;height:23.2px;flex:none}
+@media (max-width:1359px){.brand{display:none}}
+@media (prefers-reduced-motion:reduce){
+  .wd,.mk,.swapin,.said.ok::after{animation-delay:0s!important}
+  .shim{background:none;-webkit-text-fill-color:currentColor}
+  .mic::after,.typing::after{display:none}
+}
+
 /* ---------- mobile ---------- */
 .mbar{display:none}
 @media (max-width:999px){
@@ -267,7 +323,7 @@ input{font:inherit;color:inherit}
   .stage{order:-1;height:auto;min-height:0}
   .roles,.narr,.foot,.eyebrow{display:none}
   body:not(.dcsOn) .dcs{display:none}
-  .toast{top:calc(84px + env(safe-area-inset-top));bottom:auto}
+  .toast{bottom:calc(92px + env(safe-area-inset-bottom))}
   .mbar{display:block;position:sticky;top:0;z-index:5;background:var(--bg);padding:max(10px,env(safe-area-inset-top)) 12px 6px}
   .center{padding:4px 16px 0}
   .headline{font-size:22px;min-height:0}
@@ -288,6 +344,9 @@ input{font:inherit;color:inherit}
   .flow{height:26px}
   #crAct,#fdAct{position:sticky;bottom:0;z-index:4;padding:8px 0 max(10px,env(safe-area-inset-bottom));background:linear-gradient(to top,var(--bg) 80%,rgba(11,14,16,0))}
   #crAct:empty,#fdAct:empty,#crAct:has(button[disabled]){display:none}
+  .flow .beam{top:4px;width:44px}
+  body.dcsOn .dcs{animation:fadeUp .4s var(--ease-out) backwards}
+  body.dcsOn .dcs.zeroed{animation:zeroRing .9s var(--ease-out)}
 }
 </style>
 </head>
@@ -296,7 +355,7 @@ input{font:inherit;color:inherit}
 <main class="app">
   <!-- control room phone -->
   <section class="phone" id="crPhone" aria-label="Control room phone">
-    <div class="ph-head"><span class="ot">OpsThread</span><span class="role"><svg width="13" height="11" viewBox="0 0 13 11" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1" y="1" width="11" height="7" rx="1"/><path d="M4 10h5"/></svg>Control</span><span class="sp"></span><div class="seg" id="segCR" style="width:148px"></div><span class="clock">--:--</span></div>
+    <div class="ph-head"><span class="ot">OpsThread</span><span class="role"><svg width="13" height="11" viewBox="0 0 13 11" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1" y="1" width="11" height="7" rx="1"/><path d="M4 10h5"/></svg>Control</span><span class="sp"></span><div class="seg" id="segCR" style="flex:none"></div></div>
     <div id="crMain" style="display:flex;flex-direction:column;flex:1;min-height:0">
       <div class="card" id="crCard"></div>
       <div class="steps" id="crSteps"></div>
@@ -324,6 +383,7 @@ input{font:inherit;color:inherit}
   <section class="stage" id="stage">
     <div class="roles">
       <div class="rl" id="rlCR"><svg viewBox="0 0 40 40" fill="none" stroke="#e6ebea" stroke-width="2"><circle cx="20" cy="12" r="7"/><path d="M8 34c1-8 6-12 12-12s11 4 12 12z"/><path d="M4 36h32"/></svg><div><b>Control room</b><span></span></div></div>
+      <div class="brand" role="img" aria-label="OpsThread"><span>Ops</span><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 68 73" aria-hidden="true"><rect x="28.5" y="14" width="11" height="50" fill="#3DDC84"/><path d="M19 72 L34 50 L49 72 Z" fill="#3DDC84" stroke="#3DDC84" stroke-width="1.5" stroke-linejoin="round"/><rect x="20" y="12" width="28" height="6" fill="#3DDC84"/><path d="M1 1 L22 15 L1 29 Z" fill="#3DDC84" stroke="#3DDC84" stroke-width="1.5" stroke-linejoin="round"/><path d="M67 1 L46 15 L67 29 Z" fill="#3DDC84" stroke="#3DDC84" stroke-width="1.5" stroke-linejoin="round"/></svg><span>hread</span></div>
       <div class="rl r" id="rlFD"><svg viewBox="0 0 40 40" fill="none" stroke="#e6ebea" stroke-width="2"><path d="M9 17a11 11 0 0 1 22 0"/><path d="M6 17h28"/><path d="M20 6v5"/><path d="M12 20a8 8 0 0 0 16 0"/><path d="M8 37c1-6 6-9 12-9s11 3 12 9"/></svg><div><b>Field</b><span></span></div></div>
     </div>
     <div class="center">
@@ -331,7 +391,7 @@ input{font:inherit;color:inherit}
       <div class="headline" id="headline"></div>
       <div class="sub" id="sub"></div>
     </div>
-    <div class="flow" id="flow"><div class="base"></div><div class="fbar" id="flowBar"></div><div class="nodes" id="nodes"></div></div>
+    <div class="flow" id="flow"><div class="base"></div><div class="fbar" id="flowBar"></div><div class="beam" id="beam"></div><div class="nodes" id="nodes"></div></div>
     <div class="narr" id="narr"></div>
     <div class="dcs" id="dcs">
       <div class="t">Control room DCS screen <i>(simulated)</i></div>
@@ -356,6 +416,7 @@ input{font:inherit;color:inherit}
 var $=function(id){return document.getElementById(id)};
 var mobile=function(){return window.matchMedia('(max-width:999px)').matches};
 var reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 
 /* ================= spring engine (one rAF loop, 4 substeps, like designbookmark motion.js) ================= */
 var Motion=(function(){
@@ -460,7 +521,7 @@ function HoldToPublish(host,o){
   b.addEventListener('keydown',function(e){if((e.key===' '||e.key==='Enter')&&!e.repeat){e.preventDefault();down()}});b.addEventListener('keyup',function(e){if(e.key===' '||e.key==='Enter')up()});
   b.addEventListener('contextmenu',function(e){e.preventDefault()});
   return {complete:function(){if(done)return;holding=true;sp.rest=true;var t1=performance.now(),from=sp.x;(function f(now){var q=Math.min(1,from+(now-t1)/450);sp.x=sp.t=q;paint();if(q<1)requestAnimationFrame(f);else finish()})(t1)},
-    setDisabled:function(d,label){disabled=d;b.classList.toggle('off',d);if(!holding&&!done)t.textContent=d&&label?label:o.label}};
+    setDisabled:function(d,label){disabled=d;b.classList.toggle('off',d);t.classList.toggle('shim',!!d&&!done);if(!holding&&!done)t.textContent=d&&label?label:o.label}};
 }
 
 /* ================= Loading to success (designbookmark: settle 280/22 width, pop 520/16 check) ================= */
@@ -504,12 +565,63 @@ function NotificationStack(host,items,o){
 
 /* ================= Task list (SmoothUI AI task list: done rows opacity .65 y+1, check draws, underline 1.4s) ================= */
 function TaskList(host,title,tasks,onDone){
-  host.innerHTML='<div class="tl"><div class="hd"><b>'+title+'</b><span class="ct">0/'+tasks.length+'</span></div>'+tasks.map(function(t,i){return '<div class="row" data-i="'+i+'"><svg class="box" viewBox="0 0 14 14"><rect x=".75" y=".75" width="12.5" height="12.5" rx="3.5" fill="#3ddc84" fill-opacity="0" stroke="#3a4448" stroke-width="1.5"/><path d="M 3.5 7.5 L 6 10 L 10.5 4.5" fill="none" stroke="#3ddc84" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><div><span class="tx">'+t.label+'</span>'+(t.sub?'<div class="sub2">'+t.sub+'</div>':'')+'</div></div>'}).join('')+'</div>';
+  host.innerHTML='<div class="tl"><div class="hd"><b class="shim">'+title+'</b><span class="ct">0/'+tasks.length+'</span></div>'+tasks.map(function(t,i){return '<div class="row" data-i="'+i+'"><svg class="box" viewBox="0 0 14 14"><rect x=".75" y=".75" width="12.5" height="12.5" rx="3.5" fill="#3ddc84" fill-opacity="0" stroke="#3a4448" stroke-width="1.5"/><path d="M 3.5 7.5 L 6 10 L 10.5 4.5" fill="none" stroke="#3ddc84" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><div><span class="tx">'+t.label+'</span>'+(t.sub?'<div class="sub2">'+t.sub+'</div>':'')+'</div></div>'}).join('')+'</div>';
   var rows=host.querySelectorAll('.row'),ct=host.querySelector('.ct'),i=0;
   function next(){if(i>0){var r=rows[i-1];r.classList.remove('run');r.classList.add('done');var rc=r.querySelector('rect');rc.setAttribute('fill-opacity','.12');rc.setAttribute('stroke','#3ddc84');ct.textContent=i+'/'+tasks.length}
     if(i<rows.length){rows[i].classList.add('run');i++;setTimeout(next,reduce?0:(tasks[i-1].ms||320))}else setTimeout(onDone,reduce?0:380)}
   next();
 }
+
+/* ================= text motion (after designbookmark.com/motion: Streaming reply, Typewriter, Marker text) ================= */
+// headline: each word rises in; at "reported, not closed" and "Closed" the key phrase gets a marker stroke
+var headNow=null,narrNow=null;
+function setHead(html){
+  if(html===headNow)return;headNow=html;var i=0,el=$('headline');
+  el.innerHTML=html.replace(/(<[^>]+>)|([^<\s]+)/g,function(m,tag,word){return tag||'<span class="wd" style="--i:'+(i++)+'">'+word+'</span>'});
+  if(S.stage===5||S.stage===6){var k=el.querySelector('.y,.g');if(k){k.classList.add('mk');k.style.setProperty('--n',i)}}
+}
+function setText(el,t){if(el.textContent===t)return;el.textContent=t;if(reduce)return;el.classList.remove('swapin');void el.offsetWidth;el.classList.add('swapin')}
+function narrate(t,y){var n=$('narr');n.className='narr'+(y?' y':'');if(t===narrNow)return;narrNow=t;
+  n.innerHTML=t?t.split(' ').map(function(w,i){return '<span class="wd" style="--i:'+i+'">'+esc(w)+'</span>'}).join(' '):''}
+function typewrite(el,text,ms){if(reduce||!el)return;var i=0;el.textContent='';el.classList.add('typing');
+  (function f(){if(!el.isConnected)return;i++;el.textContent=text.slice(0,i);if(i<text.length)setTimeout(f,text.charAt(i-1)===' '?ms*2:ms);else setTimeout(function(){el.classList.remove('typing')},600)})()}
+// what the phone heard: only the new words fade in, so the line does not flicker while the browser revises it
+var Said=(function(){var el=$('said'),prev=[];
+  function set(t,quiet){var ws=(t||'').trim().split(/\s+/).filter(Boolean),keep=0;
+    while(keep<ws.length&&keep<prev.length&&ws[keep]===prev[keep])keep++;
+    el.classList.remove('ok');
+    while(el.childNodes.length>Math.max(0,keep*2-1))el.removeChild(el.lastChild);
+    for(var i=keep;i<ws.length;i++){if(i>0)el.appendChild(document.createTextNode(' '));var s=document.createElement('span');s.className='wd'+(quiet||reduce?'':' nw');s.style.setProperty('--i',i-keep);s.textContent=ws[i];el.appendChild(s)}
+    prev=ws}
+  return {set:set,ok:function(){if(prev.length)el.classList.add('ok')},clear:function(){prev=[];el.textContent='';el.classList.remove('ok')}};
+})();
+
+/* ================= rolling digits (after designbookmark "Word roll"): only the digits that change move ================= */
+function Roller(el,n){
+  var cols=[],cur=[],last=null,ZW='\u200b';el.textContent='';
+  for(var i=0;i<n;i++){var c=document.createElement('i');c.className='rc off';c.textContent=ZW;el.appendChild(c);cols.push(c);cur.push('')}
+  function set(str,still){
+    if(str===last)return;var first=last===null,dir=(!first&&parseFloat(str)<parseFloat(last))?'dn':'up';last=str;el.setAttribute('aria-label',str);
+    for(var i=0;i<n;i++){var ch=str.charAt(str.length-n+i)||'';if(ch===cur[i])continue;var c=cols[i],old=cur[i];cur[i]=ch;
+      c.className='rc '+dir+(ch?'':' off');
+      if(reduce||first||still){c.textContent=ch||ZW;continue}
+      c.innerHTML=(old?'<i class="ro" aria-hidden="true">'+old+'</i>':'')+(ch?'<i class="ri">'+ch+'</i>':ZW);
+      (function(c){setTimeout(function(){var o=c.querySelector('.ro');if(o)o.remove()},260)})(c)}
+  }
+  return {set:set,get value(){return last}};
+}
+
+/* ================= the DCS reading lifts to the middle of the stage while the control room checks it (after "Expand card"; big screens only) ================= */
+var liftY=Motion.S(0,Motion.pair('--spring-settle')),liftS=Motion.S(1,Motion.pair('--spring-settle')),lifted=false;
+animator([liftY,liftS],function(){var still=Math.abs(liftY.x)<.05&&Math.abs(liftS.x-1)<.001;$('dcs').style.transform=still?'':'translateY('+liftY.x.toFixed(2)+'px) scale('+liftS.x.toFixed(4)+')'});
+function liftDCS(on){lifted=on;var d=$('dcs'),y=0,s=1;
+  if(on&&!mobile()){var sub=$('sub'),fl=$('flow'),top=sub.offsetTop+sub.offsetHeight+18,bot=fl.offsetTop-14,free=bot-top,h=d.offsetHeight;
+    s=Math.min(1.7,free/h,($('stage').clientWidth-24)/d.offsetWidth);
+    if(s>=1.2)y=(top+free/2)-(d.offsetTop+h/2);else s=1}
+  Motion.to(liftY,y);Motion.to(liftS,s)}
+// the request travels along the line from the control room phone to the field phone
+function beam(){if(reduce)return;var b=$('beam'),w=$('flow').clientWidth-b.offsetWidth;
+  tween(900,EASE_IN_OUT,function(p){b.style.transform='translateX('+(w*p).toFixed(1)+'px)';b.style.opacity=p<.12?p/.12:p>.82?(1-p)/.18:1},function(){b.style.opacity=0})}
 
 /* ================= icons ================= */
 function valve(state){
@@ -527,7 +639,7 @@ var listSvg='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke=
 /* ================= state ================= */
 // 0 ready | 1 asking unit | 2 unit picked | 3 sent: valve | 4 stop P-1 | 5 reported | 6 closed | 7 handover
 var S;
-function fresh(){var s={stage:0,unit:null,t:{},photo:'todo',flow:119.5,hist:[],listening:false,view:S?S.view:'cr',ho:false,opened:false,busy:false};for(var i=0;i<24;i++)s.hist.push(119+Math.random()*1.6);return s}
+function fresh(){var s={stage:0,unit:null,t:{},photo:'todo',flow:119.5,hist:[],listening:false,view:S?S.view:'cr',ho:false,opened:false,busy:false};for(var i=0;i<25;i++)s.hist.push(119+Math.random()*1.6);return s}
 S=fresh();S.view='cr';
 function hhmm(d){d=d||new Date();return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)}
 function mmss(ms){var s=Math.max(0,Math.floor(ms/1000));return Math.floor(s/60)+':'+('0'+s%60).slice(-2)}
@@ -561,8 +673,8 @@ function nodeState(i){var st=S.stage,cur={0:-1,1:0,2:1,3:2,4:3,5:4,6:99,7:99}[st
   if(cur===99||i<cur)return 'done';if(i===cur)return 'now';return 'todo'}
 function renderStage(){
   var c=copy();
-  $('eyebrow').textContent=c.e;$('headline').innerHTML=c.h;$('sub').textContent=c.s;
-  var n=$('narr');n.textContent=c.n;n.className='narr'+(c.ny?' y':'');
+  setText($('eyebrow'),c.e);setHead(c.h);setText($('sub'),c.s);
+  narrate(c.n,c.ny);
   $('rlCR').querySelector('span').textContent=c.cr;$('rlFD').querySelector('span').textContent=c.fd;
   $('rlCR').classList.toggle('turn',c.turn==='cr');$('rlFD').classList.toggle('turn',c.turn==='fd');
   $('crPhone').classList.toggle('turn',c.turn==='cr');$('fdPhone').classList.toggle('turn',c.turn==='fd');
@@ -570,6 +682,8 @@ function renderStage(){
   nodeEls.forEach(function(el,i){var s=nodeState(i);if(prevNode[i]!==s){el.querySelector('.vw').innerHTML=valve(s);el.className='node '+(s==='now'?'now':s==='done'?'ok':'');if(prevNode[i]!==undefined&&(s==='now'||s==='done')){nodeScale[i].x=.6;Motion.to(nodeScale[i],1)}prevNode[i]=s}});
   Motion.to(barS,{0:0,1:.08,2:.29,3:.51,4:.73,5:.94,6:1,7:1}[S.stage]);
   $('dcs').classList.toggle('hot',S.stage===5);
+  $('dcs').classList.toggle('cl',S.stage===6);
+  liftDCS(S.stage===5||S.stage===6);
   document.body.classList.toggle('dcsOn',S.stage===5||S.stage===6);
   $('dcsTag').textContent=tag();$('dcsDesc').textContent=U()+' P-1 discharge flow';
 }
@@ -595,12 +709,13 @@ function renderCR(){
       if(i===4&&st>=6)meta='✓';
       sh+='<div class="'+cls+'">'+valve(s)+'<span class="tx">'+(i+1)+' '+name+'</span><span class="meta">'+meta+'</span></div>';
       if(i===0&&st===1)sh+='<div class="ask"><div class="q">OpsThread asks: <b>Unit A or Unit B?</b></div><div class="opts"><button data-unit="A" id="uA">Unit A</button><button data-unit="B" id="uB">Unit B</button></div><div class="h">2 P-1s on the list</div><div class="h2">Say “Unit A” or “Unit B”, or tap.</div></div>'});
-    box.innerHTML=sh;box.className='steps box'}
+    box.innerHTML=sh;box.className='steps box';
+    if(st===1&&!S.asked){S.asked=true;typewrite(box.querySelector('.ask .q b'),'Unit A or Unit B?',30)}}
   // action area: rebuild only when the stage changes
   var hint=$('crHint');
   if(crActFor!==st){crActFor=st;var a=$('crAct');slider=null;closer=null;
     if(st<=1){a.innerHTML='<button class="bigbtn" disabled>Send to field</button>'}
-    else if(st===2){slider=SlideToConfirm(a,{label:'Slide to send to the field',busyLabel:'Sending to the field',doneLabel:'Sent',onConfirm:function(){return new Promise(function(r){setTimeout(r,reduce?0:650)})},onDone:function(){setTimeout(function(){go(3)},350)}})}
+    else if(st===2){slider=SlideToConfirm(a,{label:'Slide to send to the field',busyLabel:'Sending to the field',doneLabel:'Sent',onConfirm:function(){beam();return new Promise(function(r){setTimeout(r,reduce?0:650)})},onDone:function(){setTimeout(function(){go(3)},350)}})}
     else if(st===3||st===4){a.innerHTML='<button class="bigbtn out" disabled>Sent. The field is on it.</button>'}
     else if(st===5){closer=HoldToPublish(a,{label:'Hold to close: '+T+' reads 0',holdingLabel:'Keep holding to close',doneLabel:'Closed',onComplete:function(){go(6)},onBlocked:function(){var m=T+' still reads '+S.flow.toFixed(1)+'. Close it on 0.';$('miss').textContent=m;toast(m)}});closer.setDisabled(S.flow>.5,'Wait for '+T+' to read 0')}
     else if(st===6){a.innerHTML='<button class="bigbtn ghost" id="toHO">Shift change: see the handover</button>'}
@@ -625,16 +740,16 @@ function renderHO(){
 }
 
 /* ================= field phone ================= */
-var fdTopFor=null,fdActFor=null,stack=null;
+var fdTopFor=null,fdActFor=null,stack=null,openRoll=null;
 function renderFD(){
   var st=S.stage,top=$('fdTop'),act=$('fdAct'),T=tag();
   var mode=st<3?'empty':!S.opened?'notif':'req';
   if(mode!=='req'){
-    if(fdTopFor!=='stack'){fdTopFor='stack';top.innerHTML='<div class="empty"><b id="openN">0</b><em>open</em><span>No requests for you</span></div><div id="nsHost"></div>';
+    if(fdTopFor!=='stack'){fdTopFor='stack';top.innerHTML='<div class="empty"><b id="openN">0</b><em>open</em><span>No requests for you</span></div><div id="nsHost"></div>';openRoll=Roller($('openN'),1);openRoll.set('0');
       stack=NotificationStack($('nsHost'),[
         {id:'so1',app:'Standing order',time:'Shift start',title:'SO-01 Keep P-1 running',body:'Unit A, during the rate change (sample).',icon:listSvg},
         {id:'r01',app:'Handover',time:'21:43',title:'R-01 Unit A · P-1 · Start',body:'Reported by the last shift. Reading not checked yet.',icon:listSvg}],{hint:'Tap to fan out. Swipe a card away.'})}
-    if(mode==='notif'&&!S.pushed){S.pushed=true;$('openN').textContent='1';top.querySelector('.empty span').textContent='1 new request';
+    if(mode==='notif'&&!S.pushed&&(!mobile()||S.view==='fd')){S.pushed=true;openRoll.set('1');top.querySelector('.empty span').textContent='1 new request';
       stack.push({id:'r02',isNew:true,app:'Control room',time:'now',title:'STOP P-1 · '+U().toUpperCase(),body:'Close the P-1 discharge valve, then stop P-1. Tap to open.',icon:radioSvg,onOpen:function(){openReq()}});
       top.querySelector('.ns-hint').textContent='Tap the new request to open it.'}
     act.innerHTML='';fdActFor=null;
@@ -651,7 +766,7 @@ function renderFD(){
     if(fdActFor!==st){fdActFor=st;
       if(st===3)HoldButton(act,{title:'DONE',label:'Hold when the valve is closed',holdingLabel:'Keep holding',completeLabel:'Valve closed',tapHint:'Hold DONE for a moment. A tap is not enough.',onComplete:function(){go(4)}});
       else if(st===4)HoldButton(act,{title:'DONE',label:'Hold when P-1 is stopped',holdingLabel:'Keep holding',completeLabel:'P-1 stopped',tapHint:'Hold DONE for a moment. A tap is not enough.',afterMs:250,onComplete:function(){LoadingSuccess(act,{loading:'Sending the report',done:'Reported',ms:800,onDone:function(){go(5)}})}});
-      else if(st===5)act.innerHTML='<div class="chip"><div class="lab"><b>REPORTED</b><span data-timer="reported">0:00</span></div><p>Waiting for the control room to check '+T+'.</p></div>';
+      else if(st===5)act.innerHTML='<div class="chip"><div class="lab"><b>REPORTED</b><span data-timer="reported">0:00</span></div><p><span class="shim">Waiting for the control room to check '+T+'.</span></p></div>';
       else act.innerHTML='<div class="chip cl"><div class="lab"><b>✓ CLOSED</b><span>'+hhmm(new Date(S.t.closed))+'</span></div><p>The control room confirmed '+T+' reads 0.</p></div>';
     }
   }
@@ -661,6 +776,7 @@ function openReq(){if(S.stage!==3||S.opened)return;S.opened=true;render()}
 /* ================= view switching (mobile) ================= */
 function setView(v,why){S.view=v;segView.set(v);
   $('crPhone').classList.toggle('mhide',v!=='cr');$('fdPhone').classList.toggle('mhide',v!=='fd');
+  if(v==='fd')renderFD();
   requestAnimationFrame(function(){segCR.relayout();if(stack)stack.relayout()});
   if(why&&mobile())toast(why);if(mobile())window.scrollTo({top:0,behavior:'smooth'})}
 
@@ -668,7 +784,7 @@ function render(){renderStage();renderCR();renderFD();tick()}
 function go(stage){
   S.stage=stage;var now=Date.now();
   if(stage===1)S.t.card=now;if(stage===3)S.t.sent=now;if(stage===4)S.t.valve=now;if(stage===5)S.t.reported=now;if(stage===6)S.t.closed=now;if(stage===7)S.ho=true;
-  $('said').textContent='';$('miss').textContent='';
+  Said.clear();$('miss').textContent='';
   render();
   var c=copy();
   if(mobile()&&c.turn&&c.turn!==S.view)setTimeout(function(){setView(c.turn,c.turn==='fd'?'Field’s turn: a request just landed.':'Control room’s turn.')},700);
@@ -730,29 +846,41 @@ function startListen(){
     try{if(window.SpeechRecognitionPhrase&&'phrases' in rec)rec.phrases=PHRASES.map(function(p){return new SpeechRecognitionPhrase(p,5)})}catch(_){}
     try{var G=window.SpeechGrammarList||window.webkitSpeechGrammarList;if(G){var g=new G();g.addFromString('#JSGF V1.0; grammar ops; public <c> = stop p one | unit a | unit b | send | zero | close ;',1);rec.grammars=g}}catch(_){}
     sess++;handled={};
-    rec.onresult=function(e){for(var i=e.resultIndex;i<e.results.length;i++){var r=e.results[i],key=sess+':'+i,txt=r[0].transcript;
-      $('said').textContent=txt.trim();
-      if(handled[key])continue;
+    rec.onresult=function(e){heardSound(1);for(var i=e.resultIndex;i<e.results.length;i++){var r=e.results[i],key=sess+':'+i,txt=r[0].transcript;
+      Said.set(txt);
+      if(handled[key]){Said.ok();continue}
       var done=false;for(var k=0;k<r.length&&!done;k++)done=understand(r[k].transcript,!r.isFinal);
-      if(done){handled[key]=true;$('said').textContent=txt.trim()}
+      if(done){handled[key]=true;Said.set(txt,true);Said.ok()}
       else if(r.isFinal)understand(txt,false)}};
+    rec.onspeechstart=function(){heardSound(.8)};rec.onsoundstart=function(){heardSound(.5)};
     rec.onerror=function(e){if(e.error==='not-allowed'||e.error==='service-not-allowed'){want=false;stopListen();toast('Microphone blocked. Type it, or use the buttons.')}else if(e.error==='network'||e.error==='audio-capture'){want=false;stopListen();toast(e.error==='network'?'Voice lost the network. Type it, or use the buttons.':'No microphone found. Type it, or use the buttons.')}};
     rec.onend=function(){if(want&&S.listening){sess++;handled={};setTimeout(function(){if(want)try{rec.start()}catch(_){}},120)}else{S.listening=false;showDock()}};
     rec.start();
   }catch(err){want=false;S.listening=false;showDock();toast('Voice could not start. Type it, or use the buttons.')}
 }
 function stopListen(){want=false;S.listening=false;if(rec){try{rec.stop()}catch(_){}}showDock()}
+// voice bars: a waveform that scrolls to the left. It rests while nobody speaks and jumps each time the browser reports sound or words.
+var BARS=27,lv=[],energy=0,lvlBars;
+function heardSound(x){energy=Math.max(energy,x)}
+function levelStep(){energy*=.8;
+  lv.push(reduce?.3:Math.min(1,.13+.05*Math.sin(Date.now()/380)+energy*(.3+.7*Math.random())));if(lv.length>BARS)lv.shift();
+  for(var i=0;i<BARS;i++){var v=lv[lv.length-BARS+i];lvlBars[i].style.transform='scaleY('+(v===undefined?.13:v).toFixed(3)+')'}}
 function showDock(){$('dockIdle').hidden=S.listening;$('dockOn').hidden=!S.listening;
-  if(S.listening&&!levelT)levelT=setInterval(function(){var b=$('lvl').children;for(var i=0;i<b.length;i++)b[i].style.height=(4+Math.random()*12)+'px'},120);
+  if(S.listening&&!levelT){lv=[];energy=0;levelT=setInterval(levelStep,reduce?500:70)}
   if(!S.listening&&levelT){clearInterval(levelT);levelT=null}}
-$('lvl').innerHTML=new Array(11).join('<i></i>');
+$('lvl').innerHTML=new Array(BARS+1).join('<i></i>');lvlBars=$('lvl').children;
 
 /* ================= process value ================= */
+var dcsRoll=Roller($('dcsVal'),5),wasZero=false;dcsRoll.set(S.flow.toFixed(1));
 function stepFlow(){
   if(S.stage>=5){S.flow=S.flow>1?S.flow*.4:0}else S.flow=119.6+(Math.random()-.5)*1.8;
-  S.hist.push(S.flow);if(S.hist.length>24)S.hist.shift();
-  var v=$('dcsVal');v.textContent=S.flow.toFixed(1);v.classList.toggle('zero',S.flow<.05);
-  var l=$('sparkL');l.setAttribute('points',S.hist.map(function(y,i){return (i*4)+','+(30-y/125*24).toFixed(1)}).join(' '));l.setAttribute('stroke',S.flow<.05?'#3ddc84':'#f2d533');
+  S.hist.push(S.flow);if(S.hist.length>25)S.hist.shift();
+  var v=$('dcsVal'),z=S.flow<.05,was=parseFloat(dcsRoll.value);dcsRoll.set(S.flow.toFixed(1),S.stage<5&&Math.abs(S.flow-was)<3);v.classList.toggle('zero',z);
+  if(z!==wasZero){wasZero=z;$('dcs').classList.toggle('zeroed',z)}
+  // the trend line scrolls one sample to the left between readings instead of jumping
+  var l=$('sparkL');l.style.transition='none';l.style.transform='translateX(0)';
+  l.setAttribute('points',S.hist.map(function(y,i){return (i*4)+','+(30-y/125*24).toFixed(1)}).join(' '));l.setAttribute('stroke',z?'#3ddc84':'#f2d533');
+  if(!reduce){l.getBoundingClientRect();l.style.transition='transform .7s linear';l.style.transform='translateX(-4px)'}
   if(S.stage===5&&closer)closer.setDisabled(S.flow>.5,'Wait for '+tag()+' to read 0');
 }
 function tick(){var now=Date.now();
@@ -775,8 +903,8 @@ document.addEventListener('click',function(e){
     case 'hoBack':S.ho=false;if(S.stage===7)S.stage=6;render();break;
   }
 });
-$('typForm').addEventListener('submit',function(e){e.preventDefault();var v=$('typ').value.trim();if(!v)return;$('said').textContent=v;if(understand(v))$('typ').value=''});
-window.addEventListener('resize',function(){segView.relayout();segCR.relayout();if(stack)stack.relayout()});
+$('typForm').addEventListener('submit',function(e){e.preventDefault();var v=$('typ').value.trim();if(!v)return;Said.set(v,true);if(understand(v))$('typ').value=''});
+window.addEventListener('resize',function(){segView.relayout();segCR.relayout();renderFD();if(stack)stack.relayout();if(lifted)liftDCS(true)});
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){segView.relayout();segCR.relayout();if(stack)stack.relayout()});
 
 render();setView('cr');
